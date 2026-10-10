@@ -64,10 +64,36 @@ node tests/game.test.mjs
 - Win when the opponent’s HP reaches 0
 - Quiet visual language: night ridge, IBM Plex, minimal chrome
 
+## Install in Logos Basecamp (Package Repositories)
+
+Basecamp **Settings → Package Repositories → Add repository** expects the URL of a `logos-repo.json` catalog, not the bare GitHub repo URL.
+
+Paste this:
+
+```text
+https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
+```
+
+That file’s `indexUrl` points at the catalog listing:
+
+```text
+https://github.com/uNexpectedR/pocket-tanks/releases/download/index/index.json
+```
+
+Until a signed/unsigned `.lgx` for `ridge_fire` is published and listed in that index, the repository will add successfully but show **no installable packages**. Local paths (`nix run`, Qt preview, Install Local Package) still work from source.
+
+### Publishing a package (blocker today)
+
+Building `.lgx` needs Nix + `logos-module-builder` / `lgx` (not available in the agent environment that created this catalog). Typical path:
+
+1. `nix build` (or the [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) CI) to produce `ridge_fire-0.1.0.lgx`.
+2. Optional: `lgx sign` and put the signer DID in `logos-repo.json` → `trustedSigners`.
+3. Upload the `.lgx` as a GitHub Release asset; rebuild `index.json` with [`index.py`](https://github.com/logos-co/logos-modules-release-tool) (`build` / `add`) and replace the `index` release asset.
+
 ## Deferred
 
 - Extra weapons / inventory economy
 - Wind and multiplayer networking
 - AI opponent
 - Sound / particle polish beyond blast rings
-- LGX packaging CI beyond the flake template
+- LGX packaging CI (Nix / release-action) to populate the catalog index
