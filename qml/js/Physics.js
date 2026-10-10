@@ -26,12 +26,11 @@ function muzzlePoint(tankX, tankY, angleDeg, facing, barrelLen) {
 }
 
 function stepProjectile(shot, dt) {
-    if (!shot.rolling) {
-        shot.vx += 0
-        shot.vy += GRAVITY * dt
-    } else {
+    if (shot.rolling) {
         shot.vy += GRAVITY * dt * 0.35
         shot.vx *= shot.friction === undefined ? 0.985 : shot.friction
+    } else {
+        shot.vy += GRAVITY * dt
     }
     shot.x += shot.vx * dt
     shot.y += shot.vy * dt

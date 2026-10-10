@@ -50,9 +50,20 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#0e1218d9"
-        border.color: "#3a423855"
+        gradient: Gradient {
+            GradientStop { position: 0; color: "#0a0e14ee" }
+            GradientStop { position: 1; color: "#121820f0" }
+        }
+        border.color: "#3a423866"
         border.width: 1
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 1
+            color: "#e2b57a33"
+        }
     }
 
     RowLayout {

@@ -12,7 +12,7 @@ Original game inspired by the artillery genre. No Pocket Tanks assets or IP.
 | `flake.nix` | Nix build via `mkLogosQmlModule` |
 | `qml/Main.qml` | Lobby + play root |
 | `qml/NetBridge.qml` | Online host/join over `logos.callModule` / `onModuleEvent` |
-| `qml/js/` | Terrain, physics, weapons, match flow, net helpers |
+| `qml/js/` | Terrain, physics, weapons, match flow, paint, effects, net |
 
 ## Run locally
 
@@ -40,7 +40,7 @@ node tests/game.test.mjs
 
 ## Multiplayer (two Macs, online)
 
-Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (soft runtime dependency — install Ridge Fire first, then ensure Delivery is available from the Logos catalogue / Chat stack). Uses the `logos.dev` network (no RLN membership gate).
+Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (soft runtime dependency). Uses the `logos.dev` network (no RLN membership gate).
 
 ### Host
 
@@ -60,12 +60,6 @@ Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (sof
 
 **Local hotseat (same Mac)** still works without networking (including `qmlscene` preview).
 
-### Blockers / notes
-
-- Pure QML apps cannot open raw sockets; online play routes through Basecamp’s `delivery_module` (`logos.callModule` + `onModuleEvent`).
-- If `delivery_module` is missing, host/join shows an error — install it from Basecamp’s catalogue, then retry.
-- Preview/`qmlscene` has no `logos` bridge → online disabled; use Basecamp for two-Mac play.
-
 ## Weapons
 
 | Weapon | Feel |
@@ -84,17 +78,18 @@ https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).
-2. Package Manager → **Ridge Fire** `0.2.1` → Install (allow unsigned if prompted).
+2. Package Manager → **Ridge Fire** `0.3.0` → Install (allow unsigned if prompted).
 3. Open Ridge Fire from the sidebar.
 4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
 `trustedSigners` remains empty (unsigned packages).
 
-## What’s in 0.2.x
+## What’s in 0.3.x
 
-- Richer sky/terrain contrast, tank silhouettes, juice on shots/explosions
-- Readable HUD (angle / power / HP / weapon / turn)
-- Four weapons
-- Online host/join + local hotseat lobby
-- Small JS modules (`Physics`, `Weapons`, `Delivery`, `Paint`, `Effects`, `Game`, `Net`)
+- Prestige atmosphere: dusk sky, sun glow, far ridges, strata terrain, crest edge
+- Tank silhouettes with treads / muzzle flash / active-seat pulse
+- Munition trails, multi-ring blasts, sparks — readable in combat
+- Layered canvas paint (sky / terrain / play) — terrain only redraws on crater
+- In-place FX tick compaction, aim-arc cache, no shadowBlur on hot path
+- Online host/join + local hotseat lobby (unchanged delivery path)
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)

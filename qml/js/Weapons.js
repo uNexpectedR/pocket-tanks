@@ -55,8 +55,12 @@ var BURSTER = {
     fuseHeight: 48
 }
 
+var _catalog = null
+
 function catalog() {
-    return [HE_SHELL, DIRT_MOVER, ROLLER, BURSTER]
+    if (!_catalog)
+        _catalog = [HE_SHELL, DIRT_MOVER, ROLLER, BURSTER]
+    return _catalog
 }
 
 function byId(id) {

@@ -55,8 +55,11 @@ function loadBundle() {
   sandbox.Effects = {
     spawnSparks: sandbox.spawnSparks,
     pushExplosion: sandbox.pushExplosion,
+    pushMuzzle: sandbox.pushMuzzle,
     tickExplosions: sandbox.tickExplosions,
     tickSparks: sandbox.tickSparks,
+    tickMuzzles: sandbox.tickMuzzles,
+    tickAll: sandbox.tickAll,
     busy: sandbox.busy,
   }
 

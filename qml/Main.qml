@@ -12,7 +12,10 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#12161c"
+        gradient: Gradient {
+            GradientStop { position: 0; color: "#0a1018" }
+            GradientStop { position: 1; color: "#12161c" }
+        }
     }
 
     NetBridge {
@@ -58,8 +61,10 @@ Item {
             text: "Ridge Fire"
             color: "#e8e2d6"
             font.family: "IBM Plex Serif"
-            font.pixelSize: 22
+            font.pixelSize: 24
             font.weight: Font.Medium
+            style: Text.Raised
+            styleColor: "#00000066"
         }
 
         Text {

@@ -14,6 +14,9 @@ Item {
     property bool inputEnabled: true
     property int frame: 0
     property bool dirty: true
+    property int lastTerrainRev: -1
+    property int lastSkyW: 0
+    property int lastSkyH: 0
 
     readonly property string weaponName: match ? Game.weaponName(match) : Weapons.HE_SHELL.name
 
@@ -22,8 +25,11 @@ Item {
     function restart(seed) {
         var s = seed === undefined ? Math.floor(Math.random() * 1000) : seed
         match = Game.createMatch(960, 540, s)
+        lastTerrainRev = -1
         dirty = true
-        canvas.requestPaint()
+        skyLayer.requestPaint()
+        terrainLayer.requestPaint()
+        playLayer.requestPaint()
     }
 
     function canControl() {
@@ -38,7 +44,6 @@ Item {
         var intent = Game.fireIntent(match)
         if (!intent)
             return false
-        // Same apply path for local + online (lockstep-friendly).
         Game.applyRemoteFire(match, intent)
         if (localSeat >= 0)
             root.fireIntent(intent)
@@ -70,25 +75,58 @@ Item {
         return match.turn === localSeat ? " · your shot" : " · wait"
     }
 
+    function syncWorldTransform(ctx, layer) {
+        var m = root.match
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.clearRect(0, 0, layer.width, layer.height)
+        ctx.setTransform(layer.width / m.width, 0, 0, layer.height / m.height, 0, 0)
+    }
+
+    // Layer 1: sky — paint on resize (stars twinkle via rare half-rate refresh).
     Canvas {
-        id: canvas
+        id: skyLayer
         anchors.fill: parent
         renderTarget: Canvas.FramebufferObject
         renderStrategy: Canvas.Cooperative
+        onPaint: {
+            var ctx = getContext("2d")
+            if (!ctx || !root.match)
+                return
+            root.syncWorldTransform(ctx, skyLayer)
+            Paint.sky(ctx, root.match.width, root.match.height, root.animTime)
+            root.lastSkyW = width
+            root.lastSkyH = height
+        }
+    }
 
+    // Layer 2: terrain — only when heightmap revision changes.
+    Canvas {
+        id: terrainLayer
+        anchors.fill: parent
+        renderTarget: Canvas.FramebufferObject
+        renderStrategy: Canvas.Cooperative
+        onPaint: {
+            var ctx = getContext("2d")
+            if (!ctx || !root.match)
+                return
+            root.syncWorldTransform(ctx, terrainLayer)
+            Paint.terrain(ctx, root.match.heights, root.match.width, root.match.height)
+            root.lastTerrainRev = root.match.terrainRev || 0
+        }
+    }
+
+    // Layer 3: tanks / aim / munitions / FX / HUD — hot path.
+    Canvas {
+        id: playLayer
+        anchors.fill: parent
+        renderTarget: Canvas.FramebufferObject
+        renderStrategy: Canvas.Cooperative
         onPaint: {
             var ctx = getContext("2d")
             if (!ctx || !root.match)
                 return
             var m = root.match
-            var w = m.width
-            var h = m.height
-            ctx.setTransform(1, 0, 0, 1, 0, 0)
-            ctx.clearRect(0, 0, width, height)
-            ctx.setTransform(width / w, 0, 0, height / h, 0, 0)
-
-            Paint.sky(ctx, w, h)
-            Paint.terrain(ctx, m.heights, w, h)
+            root.syncWorldTransform(ctx, playLayer)
 
             if (root.showPreview && m.phase === "aim" && root.canControl())
                 Paint.aimArc(ctx, Game.aimPreview(m))
@@ -97,9 +135,10 @@ Item {
                 Paint.tank(ctx, m.tanks[i], m.phase !== "over" && m.turn === i, root.animTime)
 
             Paint.projectile(ctx, m.projectile)
+            Paint.muzzleFlash(ctx, m.muzzles)
             Paint.explosions(ctx, m.explosions)
             Paint.sparks(ctx, m.sparks)
-            Paint.hud(ctx, w, m, Game.weaponName(m), root.seatHint())
+            Paint.hud(ctx, m.width, m, Game.weaponName(m), root.seatHint())
             root.dirty = false
         }
     }
@@ -119,15 +158,32 @@ Item {
             if (m.phase !== "over")
                 moved = Game.tick(m, dt)
             else
-                moved = Effects.tickExplosions(m, dt) || Effects.tickSparks(m, dt)
+                moved = Effects.tickAll(m, dt)
 
-            // Aim: half-rate for pulse; flight/effects: every frame; inputs set dirty.
+            if ((m.terrainRev || 0) !== root.lastTerrainRev)
+                terrainLayer.requestPaint()
+
             var busy = moved || m.phase === "flight" || m.phase === "resolve" || Effects.busy(m)
+            // Aim: half-rate for active-seat pulse; flight/FX: every frame.
             if (root.dirty || busy || (root.frame & 1) === 0)
-                canvas.requestPaint()
+                playLayer.requestPaint()
+
+            // Rare sky refresh keeps star twinkle alive without per-frame sky cost.
+            if ((root.frame % 30) === 0)
+                skyLayer.requestPaint()
         }
     }
 
-    onWidthChanged: { dirty = true; canvas.requestPaint() }
-    onHeightChanged: { dirty = true; canvas.requestPaint() }
+    onWidthChanged: {
+        dirty = true
+        skyLayer.requestPaint()
+        terrainLayer.requestPaint()
+        playLayer.requestPaint()
+    }
+    onHeightChanged: {
+        dirty = true
+        skyLayer.requestPaint()
+        terrainLayer.requestPaint()
+        playLayer.requestPaint()
+    }
 }
