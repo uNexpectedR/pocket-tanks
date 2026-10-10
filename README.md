@@ -94,18 +94,18 @@ https://github.com/uNexpectedR/pocket-tanks/releases/download/ridge_fire-v0.1.0/
 
 ### Caveats
 
-- Current publish is **unsigned** (`trustedSigners: []`). Basecamp must allow unsigned packages (signature-policy setting) for install to succeed.
-- The hand-built `0.1.0` release includes **linux-amd64** only. macOS / ARM users need a multi-variant rebuild (Actions → **Release ridge_fire**, or bump `metadata.json` version and re-run).
+- Current publish is **unsigned** (`trustedSigners: []`). Basecamp must allow unsigned packages for install to succeed.
+- Latest catalog version is **0.1.1** with variants: `darwin-arm64`, `darwin-amd64`, `darwin-x86_64`, `linux-amd64`, `linux-arm64`. Prefer **0.1.1** (Apple Silicon → `darwin-arm64`).
 - Local paths (`nix run`, Qt preview) still work from source without the catalog.
 
 ### Re-publishing
 
 ```bash
 nix build '.#lgx-portable' --out-link result-lgx-portable
-# or: Actions → Release ridge_fire (uses logos-modules-release-action)
+# QML-only: add Mac variants with lgx add/merge, or Actions → Release ridge_fire
 ```
 
-Workflows under `.github/workflows/` call [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) with `signing_mode: none` and rebuild the rolling `index` release.
+Workflows under `.github/workflows/` call [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) with `signing_mode: none` (pushing workflow YAML to GitHub needs a PAT with `workflow` scope).
 
 ## Deferred
 
