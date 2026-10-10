@@ -137,7 +137,7 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            height: 92
+            height: 120
             onMenuRequested: {
                 root.screen = "lobby"
                 field.match = null

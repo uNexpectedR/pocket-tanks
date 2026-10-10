@@ -7,7 +7,7 @@ QtObject {
     readonly property color skyHorizon: "#8a6a42"
     readonly property color ridgeDeep: "#14100c"
     readonly property color ridgeLite: "#c4a878"
-    readonly property color crest: "#f0e0b8"
+    readonly property color crest: "#8fa87a"
     readonly property color ink: "#e8e2d6"
     readonly property color inkMuted: "#9a9488"
     readonly property color amber: "#c48c48"

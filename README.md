@@ -12,7 +12,7 @@ Original game inspired by the artillery genre. No Pocket Tanks assets or IP.
 | `flake.nix` | Nix build via `mkLogosQmlModule` |
 | `qml/Main.qml` | Lobby + play root |
 | `qml/NetBridge.qml` | Online host/join over `logos.callModule` / `onModuleEvent` |
-| `qml/js/` | Terrain, physics, weapons, match flow, paint, effects, net |
+| `qml/js/` | Terrain, physics, weapons, names, match flow, paint, effects, net |
 
 ## Run locally
 
@@ -47,13 +47,13 @@ Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (sof
 1. Open **Ridge Fire** → **Host online match**.
 2. Wait until the status shows a **room code** (6 characters).
 3. Share that code with the other player.
-4. When the guest joins, the match starts automatically (host is **Amber**).
+4. When the guest joins, the match starts automatically (left seat).
 
 ### Guest
 
 1. Open **Ridge Fire** on the second Mac.
 2. Enter the host’s room code → **Join**.
-3. Match starts when the host receives your hello (guest is **Slate**).
+3. Match starts when the host receives your hello (right seat).
 4. Take turns — only your seat can aim/fire; the other Mac mirrors shots over delivery.
 
 ### Fallback
@@ -68,6 +68,11 @@ Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (sof
 | Dirt Mover | Deep trench + spoil piles |
 | Ridge Roller | Lands, then rolls downhill before detonating |
 | Sky Burster | Airburst above the ridge |
+| Spike Shell | Hard direct hit, tight splash |
+| Splinter Cap | Breaks into three small blasts |
+| Mole Charge | Deep narrow dig |
+| Skipper | Skips once on dirt, then arms |
+| Ember Pot | Wide soft splash |
 
 ## Install in Logos Basecamp
 
@@ -78,19 +83,18 @@ https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).
-2. Package Manager → **Ridge Fire** `0.3.1` → Install (allow unsigned if prompted).
+2. Package Manager → **Ridge Fire** `0.4.0` → Install (allow unsigned if prompted).
 3. Open Ridge Fire from the sidebar.
 4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
 `trustedSigners` remains empty (unsigned packages).
 
-## What’s in 0.3.x
+## What’s in 0.4.x
 
-- Prestige atmosphere: dusk sky, sun glow, far ridges, strata terrain, crest edge
-- Tank silhouettes with treads / muzzle flash / active-seat pulse
-- Munition trails, multi-ring blasts, sparks — readable in combat
-- Layered canvas paint (sky / terrain / play) — terrain only redraws on crater
-- In-place FX tick compaction, aim-arc cache, no shadowBlur on hot path
-- Input fix: keys/Fire on the play surface (no full-screen FocusScope overlay)
-- Online host/join + local hotseat lobby (unchanged delivery path)
+- Nine curated weapons with distinct effects
+- Fairer hits: ellipse hull, direct vs splash, radius-aware terrain, flight substeps
+- Sage green crest (grass line)
+- Seeded random callsigns each match
+- Taller, more readable control bar
+- Layered canvas paint + FX compaction from 0.3.x
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)

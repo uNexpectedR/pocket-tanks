@@ -120,19 +120,19 @@ function terrain(ctx, heights, w, h) {
     }
     ctx.restore()
 
-    // Warm crest edge — combat-readable silhouette.
+    // Sage grass crest — combat-readable silhouette (not rose/pink).
     ctx.beginPath()
     ctx.moveTo(0, heights[0])
     for (var j = 1; j < n; j++)
         ctx.lineTo(j, heights[j])
-    ctx.strokeStyle = "#f0e0b8cc"
-    ctx.lineWidth = 2.25
+    ctx.strokeStyle = "#8fa87acc"
+    ctx.lineWidth = 2.4
     ctx.stroke()
     ctx.beginPath()
     ctx.moveTo(0, heights[0] + 1.5)
     for (var k = 1; k < n; k++)
         ctx.lineTo(k, heights[k] + 1.5)
-    ctx.strokeStyle = "#6a503088"
+    ctx.strokeStyle = "#4a5a3888"
     ctx.lineWidth = 3
     ctx.stroke()
 }
