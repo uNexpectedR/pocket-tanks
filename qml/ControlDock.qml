@@ -68,45 +68,45 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        anchors.topMargin: 10
-        anchors.bottomMargin: 10
-        spacing: 14
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
+        anchors.topMargin: 14
+        anchors.bottomMargin: 14
+        spacing: 16
 
         ColumnLayout {
-            Layout.preferredWidth: 150
-            spacing: 2
+            Layout.preferredWidth: 168
+            spacing: 4
             Text {
                 text: gameOver ? "Match over" : tankName
                 color: ink
                 font.family: "IBM Plex Serif"
-                font.pixelSize: 15
+                font.pixelSize: 17
             }
             Text {
                 text: waitHint || weaponName
                 color: waitHint ? accent : muted
                 font.family: "IBM Plex Sans"
-                font.pixelSize: 12
+                font.pixelSize: 13
             }
         }
 
         ColumnLayout {
-            Layout.preferredWidth: 130
-            spacing: 4
+            Layout.preferredWidth: 150
+            spacing: 5
             Text {
                 text: "Weapon"
                 color: muted
                 font.family: "IBM Plex Sans"
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
             ComboBox {
                 id: weaponBox
                 Layout.fillWidth: true
                 enabled: canAim && !gameOver
                 focusPolicy: Qt.NoFocus
-                model: ["HE Shell", "Dirt Mover", "Ridge Roller", "Sky Burster"]
-                property var weaponIds: ["he", "dirt", "roller", "burster"]
+                model: Weapons.names()
+                property var weaponIds: Weapons.ids()
                 onActivated: {
                     if (battlefield && currentIndex >= 0)
                         battlefield.setWeapon(weaponIds[currentIndex])
@@ -115,12 +115,12 @@ Item {
                     text: weaponBox.displayText
                     color: ink
                     font.family: "IBM Plex Sans"
-                    font.pixelSize: 12
+                    font.pixelSize: 13
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 8
                 }
                 background: Rectangle {
-                    implicitHeight: 28
+                    implicitHeight: 34
                     color: track
                     border.color: "#3a423866"
                     radius: 2
@@ -130,12 +130,12 @@ Item {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: 5
             Text {
                 text: "Angle  " + angle + "°"
                 color: muted
                 font.family: "IBM Plex Sans"
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
             Slider {
                 id: angleSlider
@@ -154,7 +154,7 @@ Item {
                     x: angleSlider.leftPadding
                     y: angleSlider.topPadding + angleSlider.availableHeight / 2 - 1
                     width: angleSlider.availableWidth
-                    height: 2
+                    height: 3
                     color: track
                     Rectangle {
                         width: angleSlider.visualPosition * parent.width
@@ -165,8 +165,8 @@ Item {
                 handle: Rectangle {
                     x: angleSlider.leftPadding + angleSlider.visualPosition * (angleSlider.availableWidth - width)
                     y: angleSlider.topPadding + angleSlider.availableHeight / 2 - height / 2
-                    width: 14
-                    height: 14
+                    width: 16
+                    height: 16
                     radius: 2
                     color: ink
                 }
@@ -175,12 +175,12 @@ Item {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: 5
             Text {
                 text: "Power  " + power
                 color: muted
                 font.family: "IBM Plex Sans"
-                font.pixelSize: 11
+                font.pixelSize: 12
             }
             Slider {
                 id: powerSlider
@@ -199,7 +199,7 @@ Item {
                     x: powerSlider.leftPadding
                     y: powerSlider.topPadding + powerSlider.availableHeight / 2 - 1
                     width: powerSlider.availableWidth
-                    height: 2
+                    height: 3
                     color: track
                     Rectangle {
                         width: powerSlider.visualPosition * parent.width
@@ -210,8 +210,8 @@ Item {
                 handle: Rectangle {
                     x: powerSlider.leftPadding + powerSlider.visualPosition * (powerSlider.availableWidth - width)
                     y: powerSlider.topPadding + powerSlider.availableHeight / 2 - height / 2
-                    width: 14
-                    height: 14
+                    width: 16
+                    height: 16
                     radius: 2
                     color: ink
                 }
@@ -230,14 +230,14 @@ Item {
                     text: fireBtn.text
                     color: "#12161c"
                     font.family: "IBM Plex Sans"
-                    font.pixelSize: 13
+                    font.pixelSize: 14
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    implicitWidth: 88
-                    implicitHeight: 36
+                    implicitWidth: 96
+                    implicitHeight: 42
                     color: fireBtn.down ? "#e2b57a" : accent
                     radius: 2
                     opacity: fireBtn.enabled ? 1 : 0.4

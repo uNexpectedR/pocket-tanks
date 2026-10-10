@@ -4,25 +4,32 @@
 .import "Physics.js" as Physics
 .import "Weapons.js" as Weapons
 .import "Effects.js" as Effects
+.import "Names.js" as Names
 
 /*! Turn flow, tanks, firing, win checks. */
 
 var TRAIL_MAX = 18
 
 function createMatch(width, height, seed) {
-    var heights = Terrain.createHeightmap(width, Math.round(height * 0.58), Math.round(height * 0.16), seed)
+    var s = seed === undefined ? 0 : seed
+    var heights = Terrain.createHeightmap(width, Math.round(height * 0.58), Math.round(height * 0.16), s)
     var left = Terrain.settleOnSurface(heights, Math.round(width * 0.14), 12)
     var right = Terrain.settleOnSurface(heights, Math.round(width * 0.86), 12)
+    var names = Names.pickPair(s * 9973 + 17)
+    var tanks = [
+        tankSpec(0, names.left, left, 1, "#c48c48", "#e2b57a"),
+        tankSpec(1, names.right, right, -1, "#6e8b92", "#9cb8be")
+    ]
     return {
         width: width,
         height: height,
-        seed: seed === undefined ? 0 : seed,
+        seed: s,
         heights: heights,
         terrainRev: 0,
         turn: 0,
         phase: "aim",
         winner: -1,
-        message: "Amber aims",
+        message: tanks[0].name + " aims",
         weaponId: Weapons.HE_SHELL.id,
         projectile: null,
         explosions: [],
@@ -32,10 +39,7 @@ function createMatch(width, height, seed) {
         lastAppliedSeq: -1,
         _aimCacheKey: "",
         _aimCachePts: null,
-        tanks: [
-            tankSpec(0, "Amber", left, 1, "#c48c48", "#e2b57a"),
-            tankSpec(1, "Slate", right, -1, "#6e8b92", "#9cb8be")
-        ]
+        tanks: tanks
     }
 }
 
@@ -134,6 +138,7 @@ function launchShot(state, tank, weapon, angle, power) {
         weaponId: weapon.id,
         rolling: false,
         rollsLeft: 0,
+        bouncesLeft: weapon.kind === "bounce" ? (weapon.bounceCount || 1) : 0,
         friction: weapon.rollFriction || 0.985,
         trail: [],
         trailLen: 0
@@ -193,14 +198,14 @@ function applyRemoteFire(state, msg) {
     return true
 }
 
-function damageTanks(state, cx, cy, weapon) {
+function damageTanks(state, cx, cy, weapon, directTankId) {
     for (var i = 0; i < state.tanks.length; i++) {
         var t = state.tanks[i]
         if (t.hp <= 0)
             continue
-        var dx = t.x - cx
-        var dy = t.y - cy
-        var dmg = Physics.damageFalloff(Math.sqrt(dx * dx + dy * dy), weapon.blastRadius, weapon.maxDamage)
+        var dist = Physics.distanceToTank(cx, cy, t)
+        var isDirect = directTankId !== undefined && directTankId === t.id
+        var dmg = Physics.resolveDamage(dist, weapon, isDirect)
         if (dmg > 0)
             t.hp = Math.max(0, t.hp - dmg)
     }
@@ -211,21 +216,51 @@ function reshapeTerrain(state, cx, cy, weapon) {
         Terrain.carveCrater(state.heights, cx, weapon.craterRadius, 1.15)
         Terrain.pileDirt(state.heights, cx + 18, weapon.pileRadius || 36, weapon.pileHeight || 28, 36)
         Terrain.pileDirt(state.heights, cx - 18, (weapon.pileRadius || 36) * 0.7, (weapon.pileHeight || 28) * 0.55, 36)
+    } else if (weapon.kind === "digger") {
+        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.digDepth || 1.5)
     } else {
-        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.kind === "airburst" ? 0.65 : 1)
+        var scale = weapon.kind === "airburst" ? 0.65 : (weapon.kind === "cluster" ? 0.55 : 1)
+        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, scale)
     }
     state.terrainRev = (state.terrainRev || 0) + 1
 }
 
-function applyBlast(state, cx, cy, weapon) {
+function blastAt(state, cx, cy, weapon, directTankId) {
     reshapeTerrain(state, cx, cy, weapon)
-    Effects.pushExplosion(
-        state, cx, cy, weapon.blastRadius,
-        weapon.kind === "dirt" ? 0.55 : 0.5,
-        weapon.kind === "dirt" ? "#9a8768" : "#e2b57a"
-    )
-    Effects.spawnSparks(state, cx, cy, weapon.kind === "dirt" ? 10 : 16, weapon.trail || "#e2b57a")
-    damageTanks(state, cx, cy, weapon)
+    var tint = weapon.trail || "#e2b57a"
+    Effects.pushExplosion(state, cx, cy, weapon.blastRadius, weapon.kind === "dirt" ? 0.55 : 0.5, tint)
+    Effects.spawnSparks(state, cx, cy, weapon.kind === "dirt" ? 10 : 14, tint)
+    damageTanks(state, cx, cy, weapon, directTankId)
+}
+
+function applyCluster(state, cx, cy, weapon, directTankId) {
+    blastAt(state, cx, cy, weapon, directTankId)
+    var n = weapon.clusterCount || 3
+    var spread = weapon.clusterSpread || 32
+    var child = {
+        blastRadius: Math.round(weapon.blastRadius * 0.7),
+        craterRadius: Math.round(weapon.craterRadius * 0.65),
+        maxDamage: Math.round(weapon.maxDamage * 0.55),
+        directMul: 1.05,
+        trail: weapon.trail,
+        kind: "blast"
+    }
+    for (var i = 0; i < n; i++) {
+        var a = (i / n) * Math.PI * 2 + 0.4
+        var ox = cx + Math.cos(a) * spread
+        var oy = cy + Math.sin(a) * (spread * 0.35)
+        reshapeTerrain(state, ox, cy, child)
+        Effects.pushExplosion(state, ox, oy, child.blastRadius, 0.4, weapon.trail)
+        Effects.spawnSparks(state, ox, oy, 8, weapon.trail)
+        damageTanks(state, ox, oy, child, undefined)
+    }
+}
+
+function applyBlast(state, cx, cy, weapon, directTankId) {
+    if (weapon.kind === "cluster")
+        applyCluster(state, cx, cy, weapon, directTankId)
+    else
+        blastAt(state, cx, cy, weapon, directTankId)
     resettleTanks(state)
 }
 
@@ -262,8 +297,8 @@ function endTurn(state) {
     state.message = activeTank(state).name + " aims"
 }
 
-function detonate(state, shot, weapon, cx, cy) {
-    applyBlast(state, cx, cy, weapon)
+function detonate(state, shot, weapon, cx, cy, directTankId) {
+    applyBlast(state, cx, cy, weapon, directTankId)
     state.projectile = null
     state.phase = "resolve"
     state._resolveWait = 0.55
@@ -282,8 +317,17 @@ function beginRoll(state, shot, weapon) {
     state.message = "Roller grinding the ridge"
 }
 
+function beginBounce(state, shot) {
+    var ground = Terrain.sampleHeight(state.heights, shot.x)
+    shot.y = ground - (shot.radius || 4) - 1
+    shot.vy = -Math.abs(shot.vy) * 0.62
+    shot.vx *= 0.88
+    shot.bouncesLeft -= 1
+    Effects.spawnSparks(state, shot.x, shot.y, 6, "#b8c4a8")
+    state.message = "Skipper skips the crest"
+}
+
 function pushTrail(shot) {
-    // Reuse point objects when at capacity — avoids per-frame alloc + shift.
     if (shot.trailLen >= TRAIL_MAX) {
         var oldest = shot.trail.shift()
         oldest.x = shot.x
@@ -300,7 +344,7 @@ function findHitTank(state, shot) {
         var t = state.tanks[i]
         if (t.id === shot.owner && !shot.rolling)
             continue
-        if (Physics.hitsTank(shot, t, 18))
+        if (Physics.hitsTank(shot, t))
             return t
     }
     return null
@@ -310,7 +354,7 @@ function tickFlight(state, dt) {
     var shot = state.projectile
     if (!shot)
         return false
-    Physics.stepProjectile(shot, dt)
+    Physics.stepProjectileSafe(shot, dt)
     var weapon = Weapons.byId(shot.weaponId)
     pushTrail(shot)
 
@@ -328,8 +372,9 @@ function tickFlight(state, dt) {
         }
     }
 
-    if (findHitTank(state, shot)) {
-        detonate(state, shot, weapon, shot.x, shot.y)
+    var hit = findHitTank(state, shot)
+    if (hit) {
+        detonate(state, shot, weapon, shot.x, shot.y, hit.id)
         return true
     }
 
@@ -338,6 +383,11 @@ function tickFlight(state, dt) {
 
     var cx = shot.x
     var cy = Terrain.sampleHeight(state.heights, cx)
+
+    if (weapon.kind === "bounce" && (shot.bouncesLeft || 0) > 0 && !shot.rolling) {
+        beginBounce(state, shot)
+        return true
+    }
     if (weapon.kind === "roller" && !shot.rolling) {
         beginRoll(state, shot, weapon)
         return true

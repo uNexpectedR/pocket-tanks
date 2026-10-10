@@ -58,6 +58,27 @@ const Physics = loadPragmaJs("qml/js/Physics.js")
   assert.equal(Physics.damageFalloff(0, 40, 50), 50)
   assert.equal(Physics.damageFalloff(40, 40, 50), 0)
   assert.ok(Physics.damageFalloff(20, 40, 50) < 50)
+  // Mid-range should be softer than old t² but still meaningful
+  const mid = Physics.damageFalloff(20, 40, 50)
+  assert.ok(mid > 10 && mid < 45)
+}
+
+{
+  const tank = { x: 100, y: 200, hp: 100 }
+  assert.equal(Physics.hitsTank({ x: 100, y: 197 }, tank), true)
+  assert.equal(Physics.hitsTank({ x: 140, y: 200 }, tank), false)
+  const weapon = { maxDamage: 40, blastRadius: 40, directMul: 1.4 }
+  assert.equal(Physics.resolveDamage(0, weapon, true), 56)
+  assert.ok(Physics.resolveDamage(20, weapon, false) < 40)
+}
+
+{
+  const shot = { x: 50, y: 98, radius: 5, vx: 0, vy: 0, age: 0 }
+  const heights = new Array(100).fill(100)
+  // y + radius*0.4 = 100 → kisses the crest
+  assert.equal(Physics.hitsTerrain(shot, (h, x) => h[Math.floor(x)], heights), true)
+  shot.y = 90
+  assert.equal(Physics.hitsTerrain(shot, (h, x) => h[Math.floor(x)], heights), false)
 }
 
 console.log("physics.test.mjs: ok")

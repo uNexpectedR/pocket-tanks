@@ -21,6 +21,7 @@ function loadBundle() {
     "qml/js/Physics.js",
     "qml/js/Weapons.js",
     "qml/js/Effects.js",
+    "qml/js/Names.js",
     "qml/js/Net.js",
     "qml/js/Delivery.js",
   ])
@@ -40,10 +41,14 @@ function loadBundle() {
     launchVelocity: sandbox.launchVelocity,
     muzzlePoint: sandbox.muzzlePoint,
     stepProjectile: sandbox.stepProjectile,
+    stepProjectileSafe: sandbox.stepProjectileSafe,
     outOfBounds: sandbox.outOfBounds,
     hitsTerrain: sandbox.hitsTerrain,
     hitsTank: sandbox.hitsTank,
+    tankHitFactor: sandbox.tankHitFactor,
+    distanceToTank: sandbox.distanceToTank,
     damageFalloff: sandbox.damageFalloff,
+    resolveDamage: sandbox.resolveDamage,
     predictArc: sandbox.predictArc,
   }
   sandbox.Weapons = {
@@ -51,6 +56,8 @@ function loadBundle() {
     catalog: sandbox.catalog,
     byId: sandbox.byId,
     nextId: sandbox.nextId,
+    names: sandbox.names,
+    ids: sandbox.ids,
   }
   sandbox.Effects = {
     spawnSparks: sandbox.spawnSparks,
@@ -62,6 +69,10 @@ function loadBundle() {
     tickAll: sandbox.tickAll,
     busy: sandbox.busy,
   }
+  sandbox.Names = {
+    pickPair: sandbox.pickPair,
+    POOL: sandbox.POOL,
+  }
 
   loadFile("qml/js/Game.js", sandbox)
   return sandbox
@@ -72,7 +83,15 @@ const state = G.createMatch(960, 540, 11)
 assert.equal(state.tanks.length, 2)
 assert.equal(state.phase, "aim")
 assert.ok(state.tanks[0].x < state.tanks[1].x)
-assert.equal(G.catalog().length, 4)
+assert.equal(G.catalog().length, 9)
+assert.ok(state.tanks[0].name.length > 0)
+assert.ok(state.tanks[1].name.length > 0)
+assert.notEqual(state.tanks[0].name, state.tanks[1].name)
+
+const namesA = G.pickPair(11)
+const namesB = G.pickPair(11)
+assert.deepEqual(namesA, namesB)
+assert.notEqual(G.pickPair(11).left, G.pickPair(99).left)
 
 G.setAngle(state, 40)
 G.setPower(state, 70)
@@ -100,5 +119,9 @@ assert.ok(G.topicForRoom("ABC123").includes("ridge-fire"))
 assert.deepEqual(G.decodeMessage(G.encodeMessage({ t: "hello", seed: 3 })), { t: "hello", seed: 3 })
 assert.equal(G.parseResult(JSON.stringify({ success: false, error: "x" })).ok, false)
 assert.equal(G.parseResult(JSON.stringify({ success: true })).ok, true)
+
+assert.ok(G.ids().includes("spike"))
+assert.ok(G.ids().includes("skipper"))
+assert.equal(G.names().length, 9)
 
 console.log("game.test.mjs: ok")
