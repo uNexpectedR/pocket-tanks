@@ -1,6 +1,6 @@
 import QtQuick 2.15
-import "../js/Game.js" as Game
-import "../js/Weapons.js" as Weapons
+import "js/Game.js" as Game
+import "js/Weapons.js" as Weapons
 
 Item {
     id: root
