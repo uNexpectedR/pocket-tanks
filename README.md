@@ -74,21 +74,39 @@ Paste this:
 https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
-That file’s `indexUrl` points at the catalog listing:
+Then:
+
+1. Open **Settings → Package Repositories → Add repository**.
+2. Paste the URL above and confirm.
+3. Refresh the package list if needed — you should see **Ridge Fire** (`ridge_fire` `0.1.0`).
+4. Install it from the catalog UI (or **Install Local Package** with a downloaded `.lgx`).
+
+Catalog index (auto-updated):
 
 ```text
 https://github.com/uNexpectedR/pocket-tanks/releases/download/index/index.json
 ```
 
-Until a signed/unsigned `.lgx` for `ridge_fire` is published and listed in that index, the repository will add successfully but show **no installable packages**. Local paths (`nix run`, Qt preview, Install Local Package) still work from source.
+Package asset:
 
-### Publishing a package (blocker today)
+```text
+https://github.com/uNexpectedR/pocket-tanks/releases/download/ridge_fire-v0.1.0/ridge_fire-0.1.0.lgx
+```
 
-Building `.lgx` needs Nix + `logos-module-builder` / `lgx` (not available in the agent environment that created this catalog). Typical path:
+### Caveats
 
-1. `nix build` (or the [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) CI) to produce `ridge_fire-0.1.0.lgx`.
-2. Optional: `lgx sign` and put the signer DID in `logos-repo.json` → `trustedSigners`.
-3. Upload the `.lgx` as a GitHub Release asset; rebuild `index.json` with [`index.py`](https://github.com/logos-co/logos-modules-release-tool) (`build` / `add`) and replace the `index` release asset.
+- Current publish is **unsigned** (`trustedSigners: []`). Basecamp must allow unsigned packages (signature-policy setting) for install to succeed.
+- The hand-built `0.1.0` release includes **linux-amd64** only. macOS / ARM users need a multi-variant rebuild (Actions → **Release ridge_fire**, or bump `metadata.json` version and re-run).
+- Local paths (`nix run`, Qt preview) still work from source without the catalog.
+
+### Re-publishing
+
+```bash
+nix build '.#lgx-portable' --out-link result-lgx-portable
+# or: Actions → Release ridge_fire (uses logos-modules-release-action)
+```
+
+Workflows under `.github/workflows/` call [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) with `signing_mode: none` and rebuild the rolling `index` release.
 
 ## Deferred
 
@@ -96,4 +114,4 @@ Building `.lgx` needs Nix + `logos-module-builder` / `lgx` (not available in the
 - Wind and multiplayer networking
 - AI opponent
 - Sound / particle polish beyond blast rings
-- LGX packaging CI (Nix / release-action) to populate the catalog index
+- Multi-variant / signed catalog releases
