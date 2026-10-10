@@ -12,6 +12,6 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        source: "Main.qml"
+        source: "qml/Main.qml"
     }
 }

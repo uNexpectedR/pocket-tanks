@@ -1,11 +1,11 @@
 {
   "name": "ridge_fire",
   "display_name": "Ridge Fire",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "ui_qml",
   "category": "games",
   "description": "Turn-based artillery duel across a destructible ridge. Aim, fire, reshape the land.",
-  "view": "Main.qml",
+  "view": "qml/Main.qml",
   "icon": "src/icons/icon.png",
   "dependencies": [],
   "provides": [],

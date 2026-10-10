@@ -16,8 +16,8 @@ function loadPragmaJs(rel) {
   return sandbox
 }
 
-const Terrain = loadPragmaJs("js/Terrain.js")
-const Physics = loadPragmaJs("js/Physics.js")
+const Terrain = loadPragmaJs("qml/js/Terrain.js")
+const Physics = loadPragmaJs("qml/js/Physics.js")
 
 // Heightmap length and flanks.
 {

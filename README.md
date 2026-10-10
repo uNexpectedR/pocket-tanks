@@ -10,11 +10,10 @@ Matches Logos Basecamp module conventions from [`logos-module-builder#ui-qml`](h
 
 | File | Role |
 | --- | --- |
-| `metadata.json` | Module identity (`type: ui_qml`, `view: Main.qml`) |
+| `metadata.json` | Module identity (`type: ui_qml`, `view: qml/Main.qml`) |
 | `flake.nix` | Nix build via `mkLogosQmlModule` |
-| `Main.qml` | Plugin root view (loaded by Basecamp / standalone host) |
-| `qml/` | Battlefield canvas + control dock |
-| `js/` | Terrain, physics, weapons, match flow |
+| `qml/Main.qml` | Plugin root view (loaded by Basecamp / standalone host) |
+| `qml/` | Battlefield canvas, control dock, game JS |
 | `Preview.qml` | Local `qmlscene` window wrapper |
 
 ## Run locally

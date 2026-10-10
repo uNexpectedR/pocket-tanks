@@ -16,7 +16,7 @@ function loadFile(rel, sandbox) {
 
 function loadBundle() {
   const sandbox = { Math, console, Array }
-  for (const rel of ["js/Terrain.js", "js/Physics.js", "js/Weapons.js"])
+  for (const rel of ["qml/js/Terrain.js", "qml/js/Physics.js", "qml/js/Weapons.js"])
     loadFile(rel, sandbox)
 
   sandbox.Terrain = {
@@ -43,7 +43,7 @@ function loadBundle() {
     byId: sandbox.byId,
   }
 
-  loadFile("js/Game.js", sandbox)
+  loadFile("qml/js/Game.js", sandbox)
   return sandbox
 }
 
