@@ -18,7 +18,7 @@ function createMatch(width, height, seed) {
         turn: 0,
         phase: "aim", // aim | flight | resolve | over
         winner: -1,
-        message: "Ridge Fire",
+        message: "Amber aims",
         weaponId: Weapons.SHELL.id,
         projectile: null,
         explosions: [],

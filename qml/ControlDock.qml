@@ -26,7 +26,14 @@ Item {
         var t = m.tanks[m.turn]
         if (!t)
             return
-        tankName = t.name
+        if (gameOver)
+            tankName = m.message
+        else if (m.phase === "flight")
+            tankName = t.name + " · firing"
+        else if (m.phase === "resolve")
+            tankName = t.name + " · impact"
+        else
+            tankName = t.name + " · aim"
         angle = Math.round(t.angle)
         power = Math.round(t.power)
         weaponName = battlefield.weaponName
@@ -51,7 +58,7 @@ Item {
             Layout.preferredWidth: 140
             spacing: 2
             Text {
-                text: gameOver ? "Match over" : (tankName + " · aim")
+                text: gameOver ? "Match over" : tankName
                 color: ink
                 font.family: "IBM Plex Serif"
                 font.pixelSize: 16
