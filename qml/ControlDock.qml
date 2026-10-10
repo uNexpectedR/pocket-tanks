@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "js/Weapons.js" as Weapons
 
 Item {
     id: root
@@ -9,20 +10,27 @@ Item {
     property int power: 50
     property string tankName: "—"
     property string weaponName: "HE Shell"
+    property string weaponId: "he"
     property bool canAim: true
     property bool gameOver: false
+    property string waitHint: ""
 
     readonly property color ink: "#e8e2d6"
     readonly property color muted: "#9a9488"
     readonly property color accent: "#c48c48"
     readonly property color track: "#2a323c"
 
+    signal menuRequested()
+
     function syncFromMatch() {
         if (!battlefield || !battlefield.match)
             return
         var m = battlefield.match
         gameOver = m.phase === "over"
-        canAim = m.phase === "aim"
+        canAim = battlefield.canControl()
+        waitHint = ""
+        if (!gameOver && m.phase === "aim" && battlefield.localSeat >= 0 && m.turn !== battlefield.localSeat)
+            waitHint = "Opponent aiming…"
         var t = m.tanks[m.turn]
         if (!t)
             return
@@ -37,6 +45,7 @@ Item {
         angle = Math.round(t.angle)
         power = Math.round(t.power)
         weaponName = battlefield.weaponName
+        weaponId = m.weaponId
     }
 
     Rectangle {
@@ -48,26 +57,62 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
-        anchors.topMargin: 12
-        anchors.bottomMargin: 12
-        spacing: 22
+        anchors.leftMargin: 16
+        anchors.rightMargin: 16
+        anchors.topMargin: 10
+        anchors.bottomMargin: 10
+        spacing: 14
 
         ColumnLayout {
-            Layout.preferredWidth: 140
+            Layout.preferredWidth: 150
             spacing: 2
             Text {
                 text: gameOver ? "Match over" : tankName
                 color: ink
                 font.family: "IBM Plex Serif"
-                font.pixelSize: 16
+                font.pixelSize: 15
             }
             Text {
-                text: weaponName
-                color: muted
+                text: waitHint || weaponName
+                color: waitHint ? accent : muted
                 font.family: "IBM Plex Sans"
                 font.pixelSize: 12
+            }
+        }
+
+        ColumnLayout {
+            Layout.preferredWidth: 130
+            spacing: 4
+            Text {
+                text: "Weapon"
+                color: muted
+                font.family: "IBM Plex Sans"
+                font.pixelSize: 11
+            }
+            ComboBox {
+                id: weaponBox
+                Layout.fillWidth: true
+                enabled: canAim && !gameOver
+                model: ["HE Shell", "Dirt Mover", "Ridge Roller", "Sky Burster"]
+                property var weaponIds: ["he", "dirt", "roller", "burster"]
+                onActivated: {
+                    if (battlefield && currentIndex >= 0)
+                        battlefield.setWeapon(weaponIds[currentIndex])
+                }
+                contentItem: Text {
+                    text: weaponBox.displayText
+                    color: ink
+                    font.family: "IBM Plex Sans"
+                    font.pixelSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 8
+                }
+                background: Rectangle {
+                    implicitHeight: 28
+                    color: track
+                    border.color: "#3a423866"
+                    radius: 2
+                }
             }
         }
 
@@ -162,15 +207,14 @@ Item {
         }
 
         RowLayout {
-            spacing: 10
+            spacing: 8
             Button {
                 id: fireBtn
                 text: gameOver ? "Again" : "Fire"
                 enabled: gameOver || canAim
                 onClicked: {
                     if (gameOver) {
-                        if (battlefield)
-                            battlefield.restart()
+                        root.menuRequested()
                     } else if (battlefield) {
                         battlefield.fire()
                     }
@@ -186,7 +230,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    implicitWidth: 96
+                    implicitWidth: 88
                     implicitHeight: 36
                     color: fireBtn.down ? "#e2b57a" : accent
                     radius: 2
@@ -197,13 +241,17 @@ Item {
     }
 
     Timer {
-        interval: 100
+        interval: 80
         running: true
         repeat: true
         onTriggered: {
-            // Keep sliders in sync when keyboard nudges aim.
             if (!angleSlider.pressed && !powerSlider.pressed)
                 root.syncFromMatch()
+            var ids = weaponBox.weaponIds
+            for (var i = 0; i < ids.length; i++) {
+                if (ids[i] === root.weaponId && weaponBox.currentIndex !== i)
+                    weaponBox.currentIndex = i
+            }
         }
     }
 }

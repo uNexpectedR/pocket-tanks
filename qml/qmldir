@@ -1,5 +1,5 @@
-module com.logos.module.ridge_fire
-Main 1.0 Main.qml
 singleton Theme 1.0 Theme.qml
 Battlefield 1.0 Battlefield.qml
 ControlDock 1.0 ControlDock.qml
+ModeLobby 1.0 ModeLobby.qml
+NetBridge 1.0 NetBridge.qml

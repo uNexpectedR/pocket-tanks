@@ -2,10 +2,10 @@ pragma Singleton
 import QtQuick 2.15
 
 QtObject {
-    readonly property color skyTop: "#12161c"
-    readonly property color skyHorizon: "#2a3340"
-    readonly property color ridgeDeep: "#4a3f32"
-    readonly property color ridgeLite: "#7a684f"
+    readonly property color skyTop: "#0b1018"
+    readonly property color skyHorizon: "#6a5a3a"
+    readonly property color ridgeDeep: "#2e2418"
+    readonly property color ridgeLite: "#b79a68"
     readonly property color ink: "#e8e2d6"
     readonly property color inkMuted: "#9a9488"
     readonly property color amber: "#c48c48"

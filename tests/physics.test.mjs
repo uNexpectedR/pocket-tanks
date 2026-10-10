@@ -19,14 +19,12 @@ function loadPragmaJs(rel) {
 const Terrain = loadPragmaJs("qml/js/Terrain.js")
 const Physics = loadPragmaJs("qml/js/Physics.js")
 
-// Heightmap length and flanks.
 {
   const h = Terrain.createHeightmap(200, 300, 40, 3)
   assert.equal(h.length, 200)
   assert.ok(h.every((v) => Number.isFinite(v)))
 }
 
-// Crater digs downward in screen space (y increases).
 {
   const h = Terrain.createHeightmap(120, 200, 10, 1)
   const before = h[60]
@@ -34,7 +32,13 @@ const Physics = loadPragmaJs("qml/js/Physics.js")
   assert.ok(h[60] > before, "crater should lower the surface (increase y)")
 }
 
-// Launch faces left/right.
+{
+  const h = Terrain.createHeightmap(120, 200, 10, 1)
+  const before = h[60]
+  Terrain.pileDirt(h, 60, 20, 24, 40)
+  assert.ok(h[60] < before, "pile should raise the surface (decrease y)")
+}
+
 {
   const right = Physics.launchVelocity(45, 50, 1)
   const left = Physics.launchVelocity(45, 50, -1)
@@ -43,7 +47,6 @@ const Physics = loadPragmaJs("qml/js/Physics.js")
   assert.ok(right.vy < 0)
 }
 
-// Gravity pulls projectile down over time.
 {
   const shot = { x: 0, y: 0, vx: 10, vy: -10, age: 0 }
   Physics.stepProjectile(shot, 0.1)
@@ -51,7 +54,6 @@ const Physics = loadPragmaJs("qml/js/Physics.js")
   assert.ok(shot.age > 0)
 }
 
-// Damage falloff.
 {
   assert.equal(Physics.damageFalloff(0, 40, 50), 50)
   assert.equal(Physics.damageFalloff(40, 40, 50), 0)

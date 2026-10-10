@@ -1,42 +1,26 @@
 # Ridge Fire
 
-Turn-based artillery duel for **Logos Basecamp** (`ui_qml` module). Two tanks, one ridge, destructible terrain, a single HE shell — aim with angle and power, then fire.
+Turn-based artillery duel for **Logos Basecamp** (`ui_qml` module). Aim, fire, reshape the ridge — local hotseat or **online host/join** across two Macs via Logos `delivery_module`.
 
 Original game inspired by the artillery genre. No Pocket Tanks assets or IP.
 
 ## Stack
 
-Matches Logos Basecamp module conventions from [`logos-module-builder#ui-qml`](https://github.com/logos-co/logos-module-builder):
-
 | File | Role |
 | --- | --- |
 | `metadata.json` | Module identity (`type: ui_qml`, `view: qml/Main.qml`) |
 | `flake.nix` | Nix build via `mkLogosQmlModule` |
-| `qml/Main.qml` | Plugin root view (loaded by Basecamp / standalone host) |
-| `qml/` | Battlefield canvas, control dock, game JS |
-| `Preview.qml` | Local `qmlscene` window wrapper |
+| `qml/Main.qml` | Lobby + play root |
+| `qml/NetBridge.qml` | Online host/join over `logos.callModule` / `onModuleEvent` |
+| `qml/js/` | Terrain, physics, weapons, match flow, net helpers |
 
 ## Run locally
 
-### Logos / Nix (preferred)
-
 ```bash
 nix run
-```
-
-Requires Nix flakes. This builds the module and launches the standalone UI host bundled with `logos-module-builder`.
-
-### Qt 6 preview (no Nix)
-
-```bash
-# Debian/Ubuntu example:
-# sudo apt install qmlscene-qt6 qml6-module-qtquick qml6-module-qtquick-controls \
-#   qml6-module-qtquick-layouts qml6-module-qtquick-window fonts-ibm-plex
-
+# or without Nix:
 ./tools/run-preview.sh
 ```
-
-### Tests
 
 ```bash
 node tests/physics.test.mjs
@@ -47,70 +31,69 @@ node tests/game.test.mjs
 
 | Input | Action |
 | --- | --- |
-| ← → | Angle (− / +); hold Shift for ±5 |
-| ↑ ↓ | Power (+ / −); hold Shift for ±5 |
-| Space / Enter | Fire (or restart when match is over) |
-| R | New ridge |
-| Sliders / Fire | Same as keyboard |
+| ← → | Angle (− / +); Shift for ±5 |
+| ↑ ↓ | Power (+ / −); Shift for ±5 |
+| Tab / Q | Cycle weapon |
+| Space / Enter | Fire |
+| Esc | Back to lobby |
+| R | New ridge (local only) |
 
-## What’s in the MVP
+## Multiplayer (two Macs, online)
 
-- Two tanks (Amber / Slate), alternating turns
-- Angle + power aiming with dashed arc preview
-- Gravity projectile flight
-- Destructible heightmap terrain (crater carving)
-- One weapon: HE Shell (blast damage + crater)
-- Win when the opponent’s HP reaches 0
-- Quiet visual language: night ridge, IBM Plex, minimal chrome
+Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (soft runtime dependency — install Ridge Fire first, then ensure Delivery is available from the Logos catalogue / Chat stack). Uses the `logos.dev` network (no RLN membership gate).
 
-## Install in Logos Basecamp (Package Repositories)
+### Host
 
-Basecamp **Settings → Package Repositories → Add repository** expects the URL of a `logos-repo.json` catalog, not the bare GitHub repo URL.
+1. Open **Ridge Fire** → **Host online match**.
+2. Wait until the status shows a **room code** (6 characters).
+3. Share that code with the other player.
+4. When the guest joins, the match starts automatically (host is **Amber**).
 
-Paste this:
+### Guest
+
+1. Open **Ridge Fire** on the second Mac.
+2. Enter the host’s room code → **Join**.
+3. Match starts when the host receives your hello (guest is **Slate**).
+4. Take turns — only your seat can aim/fire; the other Mac mirrors shots over delivery.
+
+### Fallback
+
+**Local hotseat (same Mac)** still works without networking (including `qmlscene` preview).
+
+### Blockers / notes
+
+- Pure QML apps cannot open raw sockets; online play routes through Basecamp’s `delivery_module` (`logos.callModule` + `onModuleEvent`).
+- If `delivery_module` is missing, host/join shows an error — install it from Basecamp’s catalogue, then retry.
+- Preview/`qmlscene` has no `logos` bridge → online disabled; use Basecamp for two-Mac play.
+
+## Weapons
+
+| Weapon | Feel |
+| --- | --- |
+| HE Shell | Classic blast + crater |
+| Dirt Mover | Deep trench + spoil piles |
+| Ridge Roller | Lands, then rolls downhill before detonating |
+| Sky Burster | Airburst above the ridge |
+
+## Install in Logos Basecamp
+
+Paste repository URL:
 
 ```text
 https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
-Then:
+1. **Settings → Package Repositories → Add repository** (or refresh if already added).
+2. Package Manager → **Ridge Fire** `0.2.0` → Install (allow unsigned if prompted).
+3. Open Ridge Fire from the sidebar.
+4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
-1. Open **Settings → Package Repositories → Add repository**.
-2. Paste the URL above and confirm.
-3. Refresh the package list if needed — you should see **Ridge Fire** (`ridge_fire` `0.1.0`).
-4. Install it from the catalog UI (or **Install Local Package** with a downloaded `.lgx`).
+`trustedSigners` remains empty (unsigned packages).
 
-Catalog index (auto-updated):
+## What’s in 0.2.0
 
-```text
-https://github.com/uNexpectedR/pocket-tanks/releases/download/index/index.json
-```
-
-Package asset:
-
-```text
-https://github.com/uNexpectedR/pocket-tanks/releases/download/ridge_fire-v0.1.0/ridge_fire-0.1.0.lgx
-```
-
-### Caveats
-
-- Current publish is **unsigned** (`trustedSigners: []`). Basecamp must allow unsigned packages for install to succeed.
-- Latest catalog version is **0.1.1** with variants: `darwin-arm64`, `darwin-amd64`, `darwin-x86_64`, `linux-amd64`, `linux-arm64`. Prefer **0.1.1** (Apple Silicon → `darwin-arm64`).
-- Local paths (`nix run`, Qt preview) still work from source without the catalog.
-
-### Re-publishing
-
-```bash
-nix build '.#lgx-portable' --out-link result-lgx-portable
-# QML-only: add Mac variants with lgx add/merge, or Actions → Release ridge_fire
-```
-
-Workflows under `.github/workflows/` call [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action) with `signing_mode: none` (pushing workflow YAML to GitHub needs a PAT with `workflow` scope).
-
-## Deferred
-
-- Extra weapons / inventory economy
-- Wind and multiplayer networking
-- AI opponent
-- Sound / particle polish beyond blast rings
-- Multi-variant / signed catalog releases
+- Richer sky/terrain contrast, tank silhouettes, juice on shots/explosions
+- Readable HUD (angle / power / HP / weapon / turn)
+- Four weapons
+- Online host/join + local hotseat lobby
+- Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)

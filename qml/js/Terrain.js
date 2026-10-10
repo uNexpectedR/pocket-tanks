@@ -1,6 +1,6 @@
 .pragma library
 
-/*! Heightmap terrain: generate, sample, carve circular craters. */
+/*! Heightmap terrain: generate, sample, carve, pile. */
 
 function createHeightmap(width, baseY, amplitude, seed) {
     var heights = new Array(width)
@@ -9,7 +9,6 @@ function createHeightmap(width, baseY, amplitude, seed) {
         var n1 = Math.sin((x + s * 17) * 0.012) * amplitude
         var n2 = Math.sin((x + s * 41) * 0.031) * (amplitude * 0.45)
         var n3 = Math.sin((x + s * 7) * 0.067) * (amplitude * 0.18)
-        // Soft plateaus near spawn flanks so tanks start on firm ground.
         var edgeBoost = 0
         if (x < width * 0.18 || x > width * 0.82)
             edgeBoost = amplitude * 0.12
@@ -39,6 +38,10 @@ function surfaceNormal(heights, x) {
     return { x: -dy / len, y: 4 / len }
 }
 
+function slopeAt(heights, x) {
+    return sampleHeight(heights, x + 2) - sampleHeight(heights, x - 2)
+}
+
 function carveCrater(heights, cx, radius, depthScale) {
     var r = Math.max(4, Math.round(radius))
     var depth = (depthScale === undefined ? 1 : depthScale) * r * 0.85
@@ -49,10 +52,25 @@ function carveCrater(heights, cx, radius, depthScale) {
         var falloff = 1 - dx * dx
         if (falloff <= 0)
             continue
-        // Smooth bowl: deeper at center, soft rim.
         var dig = depth * falloff * falloff
         heights[x] = Math.min(heights[x] + dig, heights[x] + depth)
-        // In screen space +y is down, so digging increases height value.
+    }
+    return heights
+}
+
+function pileDirt(heights, cx, radius, height, floorY) {
+    var r = Math.max(4, Math.round(radius))
+    var rise = height === undefined ? r * 0.55 : height
+    var floor = floorY === undefined ? 40 : floorY
+    var start = Math.max(0, Math.floor(cx - r))
+    var end = Math.min(heights.length - 1, Math.ceil(cx + r))
+    for (var x = start; x <= end; x++) {
+        var dx = (x - cx) / r
+        var falloff = 1 - dx * dx
+        if (falloff <= 0)
+            continue
+        var lift = rise * falloff * falloff
+        heights[x] = Math.max(floor, heights[x] - lift)
     }
     return heights
 }
