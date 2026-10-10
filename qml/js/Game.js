@@ -3,8 +3,11 @@
 .import "Terrain.js" as Terrain
 .import "Physics.js" as Physics
 .import "Weapons.js" as Weapons
+.import "Effects.js" as Effects
 
 /*! Turn flow, tanks, firing, win checks. */
+
+var TRAIL_MAX = 18
 
 function createMatch(width, height, seed) {
     var heights = Terrain.createHeightmap(width, Math.round(height * 0.58), Math.round(height * 0.16), seed)
@@ -15,56 +18,41 @@ function createMatch(width, height, seed) {
         height: height,
         seed: seed === undefined ? 0 : seed,
         heights: heights,
-        wind: 0,
         turn: 0,
-        phase: "aim", // aim | flight | resolve | over
+        phase: "aim",
         winner: -1,
         message: "Amber aims",
         weaponId: Weapons.HE_SHELL.id,
-        weapons: Weapons.catalog().map(function (w) { return w.id }),
         projectile: null,
         explosions: [],
         sparks: [],
         fireSeq: 0,
         lastAppliedSeq: -1,
         tanks: [
-            {
-                id: 0,
-                name: "Amber",
-                x: left.x,
-                y: left.y,
-                hp: 100,
-                maxHp: 100,
-                angle: 45,
-                power: 50,
-                facing: 1,
-                color: "#c48c48",
-                accent: "#e2b57a"
-            },
-            {
-                id: 1,
-                name: "Slate",
-                x: right.x,
-                y: right.y,
-                hp: 100,
-                maxHp: 100,
-                angle: 45,
-                power: 50,
-                facing: -1,
-                color: "#6e8b92",
-                accent: "#9cb8be"
-            }
+            tankSpec(0, "Amber", left, 1, "#c48c48", "#e2b57a"),
+            tankSpec(1, "Slate", right, -1, "#6e8b92", "#9cb8be")
         ]
     }
 }
 
-function activeTank(state) {
-    return state.tanks[state.turn]
+function tankSpec(id, name, pos, facing, color, accent) {
+    return {
+        id: id,
+        name: name,
+        x: pos.x,
+        y: pos.y,
+        hp: 100,
+        maxHp: 100,
+        angle: 45,
+        power: 50,
+        facing: facing,
+        color: color,
+        accent: accent
+    }
 }
 
-function inactiveTank(state) {
-    return state.tanks[1 - state.turn]
-}
+function activeTank(state) { return state.tanks[state.turn] }
+function inactiveTank(state) { return state.tanks[1 - state.turn] }
 
 function clampAim(tank) {
     tank.angle = Math.max(5, Math.min(80, tank.angle))
@@ -104,15 +92,13 @@ function setPower(state, value) {
 }
 
 function setWeapon(state, weaponId) {
-    if (state.phase !== "aim")
-        return
-    state.weaponId = Weapons.byId(weaponId).id
+    if (state.phase === "aim")
+        state.weaponId = Weapons.byId(weaponId).id
 }
 
 function cycleWeapon(state, delta) {
-    if (state.phase !== "aim")
-        return
-    state.weaponId = Weapons.nextId(state.weaponId, delta || 1)
+    if (state.phase === "aim")
+        state.weaponId = Weapons.nextId(state.weaponId, delta || 1)
 }
 
 function resettleTanks(state) {
@@ -127,22 +113,6 @@ function resettleTanks(state) {
             t.hp = 0
             t.y = state.height + 40
         }
-    }
-}
-
-function spawnSparks(state, cx, cy, count, color) {
-    for (var i = 0; i < count; i++) {
-        var a = Math.random() * Math.PI * 2
-        var sp = 40 + Math.random() * 120
-        state.sparks.push({
-            x: cx,
-            y: cy,
-            vx: Math.cos(a) * sp,
-            vy: Math.sin(a) * sp - 40,
-            age: 0,
-            life: 0.35 + Math.random() * 0.35,
-            color: color || "#e2b57a"
-        })
     }
 }
 
@@ -161,34 +131,43 @@ function launchShot(state, tank, weapon, angle, power) {
         rolling: false,
         rollsLeft: 0,
         friction: weapon.rollFriction || 0.985,
-        trail: []
+        trail: [],
+        trailLen: 0
     }
     state.phase = "flight"
     state.message = tank.name + " fires " + weapon.name
-    spawnSparks(state, muzzle.x, muzzle.y, 6, tank.accent)
+    Effects.spawnSparks(state, muzzle.x, muzzle.y, 6, tank.accent)
 }
 
 function fire(state) {
-    if (state.phase !== "aim")
+    var intent = fireIntent(state)
+    if (!intent)
         return false
-    var tank = activeTank(state)
-    if (tank.hp <= 0)
-        return false
-    var weapon = Weapons.byId(state.weaponId)
-    launchShot(state, tank, weapon, tank.angle, tank.power)
-    state.fireSeq += 1
-    return true
+    return applyRemoteFire(state, intent)
 }
 
-/*! Apply a networked fire intent (lockstep). Returns false if ignored. */
+function fireIntent(state) {
+    if (state.phase !== "aim")
+        return null
+    var tank = activeTank(state)
+    if (tank.hp <= 0)
+        return null
+    return {
+        t: "fire",
+        turn: state.turn,
+        angle: tank.angle,
+        power: tank.power,
+        weaponId: state.weaponId,
+        seq: state.fireSeq
+    }
+}
+
 function applyRemoteFire(state, msg) {
     if (!msg || msg.t !== "fire")
         return false
     if (msg.seq !== undefined && msg.seq <= state.lastAppliedSeq)
         return false
-    if (state.phase !== "aim" && state.phase !== "over")
-        return false
-    if (state.phase === "over")
+    if (state.phase !== "aim")
         return false
     if (msg.turn !== undefined && msg.turn !== state.turn)
         return false
@@ -200,59 +179,45 @@ function applyRemoteFire(state, msg) {
     clampAim(tank)
     if (msg.weaponId)
         state.weaponId = Weapons.byId(msg.weaponId).id
-    var weapon = Weapons.byId(state.weaponId)
-    launchShot(state, tank, weapon, tank.angle, tank.power)
+    launchShot(state, tank, Weapons.byId(state.weaponId), tank.angle, tank.power)
     if (msg.seq !== undefined)
         state.lastAppliedSeq = msg.seq
     state.fireSeq = Math.max(state.fireSeq, (msg.seq || 0) + 1)
     return true
 }
 
-function fireIntent(state) {
-    if (state.phase !== "aim")
-        return null
-    var tank = activeTank(state)
-    if (tank.hp <= 0)
-        return null
-    var seq = state.fireSeq
-    return {
-        t: "fire",
-        turn: state.turn,
-        angle: tank.angle,
-        power: tank.power,
-        weaponId: state.weaponId,
-        seq: seq
-    }
-}
-
-function applyBlast(state, cx, cy, weapon) {
-    if (weapon.kind === "dirt") {
-        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, 1.15)
-        Terrain.pileDirt(state.heights, cx + 18, weapon.pileRadius || 36, weapon.pileHeight || 28, 36)
-        Terrain.pileDirt(state.heights, cx - 18, (weapon.pileRadius || 36) * 0.7, (weapon.pileHeight || 28) * 0.55, 36)
-    } else {
-        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.kind === "airburst" ? 0.65 : 1)
-    }
-    state.explosions.push({
-        x: cx,
-        y: cy,
-        r: weapon.blastRadius,
-        age: 0,
-        life: weapon.kind === "dirt" ? 0.55 : 0.5,
-        tint: weapon.kind === "dirt" ? "#9a8768" : "#e2b57a"
-    })
-    spawnSparks(state, cx, cy, weapon.kind === "dirt" ? 10 : 16, weapon.trail || "#e2b57a")
+function damageTanks(state, cx, cy, weapon) {
     for (var i = 0; i < state.tanks.length; i++) {
         var t = state.tanks[i]
         if (t.hp <= 0)
             continue
         var dx = t.x - cx
         var dy = t.y - cy
-        var dist = Math.sqrt(dx * dx + dy * dy)
-        var dmg = Physics.damageFalloff(dist, weapon.blastRadius, weapon.maxDamage)
+        var dmg = Physics.damageFalloff(Math.sqrt(dx * dx + dy * dy), weapon.blastRadius, weapon.maxDamage)
         if (dmg > 0)
             t.hp = Math.max(0, t.hp - dmg)
     }
+}
+
+function reshapeTerrain(state, cx, cy, weapon) {
+    if (weapon.kind === "dirt") {
+        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, 1.15)
+        Terrain.pileDirt(state.heights, cx + 18, weapon.pileRadius || 36, weapon.pileHeight || 28, 36)
+        Terrain.pileDirt(state.heights, cx - 18, (weapon.pileRadius || 36) * 0.7, (weapon.pileHeight || 28) * 0.55, 36)
+        return
+    }
+    Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.kind === "airburst" ? 0.65 : 1)
+}
+
+function applyBlast(state, cx, cy, weapon) {
+    reshapeTerrain(state, cx, cy, weapon)
+    Effects.pushExplosion(
+        state, cx, cy, weapon.blastRadius,
+        weapon.kind === "dirt" ? 0.55 : 0.5,
+        weapon.kind === "dirt" ? "#9a8768" : "#e2b57a"
+    )
+    Effects.spawnSparks(state, cx, cy, weapon.kind === "dirt" ? 10 : 16, weapon.trail || "#e2b57a")
+    damageTanks(state, cx, cy, weapon)
     resettleTanks(state)
 }
 
@@ -286,8 +251,7 @@ function endTurn(state) {
     state.turn = 1 - state.turn
     state.phase = "aim"
     state.projectile = null
-    var next = activeTank(state)
-    state.message = next.name + " aims"
+    state.message = activeTank(state).name + " aims"
 }
 
 function detonate(state, shot, weapon, cx, cy) {
@@ -295,8 +259,7 @@ function detonate(state, shot, weapon, cx, cy) {
     state.projectile = null
     state.phase = "resolve"
     state._resolveWait = 0.55
-    if (checkWinner(state))
-        return
+    checkWinner(state)
 }
 
 function beginRoll(state, shot, weapon) {
@@ -304,7 +267,6 @@ function beginRoll(state, shot, weapon) {
     shot.rollsLeft = weapon.rollBounces || 8
     shot.y = Terrain.sampleHeight(state.heights, shot.x) - shot.radius
     var slope = Terrain.slopeAt(state.heights, shot.x)
-    // Accelerate downhill (screen +x right, +y down).
     shot.vx += slope * 8
     if (Math.abs(shot.vx) < 40)
         shot.vx = (shot.vx >= 0 ? 1 : -1) * 55
@@ -312,112 +274,92 @@ function beginRoll(state, shot, weapon) {
     state.message = "Roller grinding the ridge"
 }
 
-function tickFlight(state, dt) {
-    if (state.phase !== "flight" || !state.projectile)
-        return
-    var shot = state.projectile
-    Physics.stepProjectile(shot, dt)
-    var weapon = Weapons.byId(shot.weaponId)
-
-    if (shot.trail.length > 18)
+function pushTrail(shot) {
+    if (shot.trailLen >= TRAIL_MAX) {
         shot.trail.shift()
+        shot.trailLen--
+    }
     shot.trail.push({ x: shot.x, y: shot.y })
+    shot.trailLen++
+}
 
-    if (Physics.outOfBounds(shot, state.width, state.height)) {
-        state.projectile = null
-        endTurn(state)
-        return
-    }
-
-    // Sky Burster: fuse above terrain.
-    if (weapon.kind === "airburst" && !shot.rolling) {
-        var ground = Terrain.sampleHeight(state.heights, shot.x)
-        var fuse = weapon.fuseHeight || 48
-        if (shot.vy > 0 && shot.y >= ground - fuse) {
-            detonate(state, shot, weapon, shot.x, shot.y)
-            return
-        }
-    }
-
-    var hitTank = null
+function findHitTank(state, shot) {
     for (var i = 0; i < state.tanks.length; i++) {
         var t = state.tanks[i]
         if (t.id === shot.owner && !shot.rolling)
             continue
-        if (Physics.hitsTank(shot, t, 18)) {
-            hitTank = t
-            break
+        if (Physics.hitsTank(shot, t, 18))
+            return t
+    }
+    return null
+}
+
+function tickFlight(state, dt) {
+    var shot = state.projectile
+    if (!shot)
+        return false
+    Physics.stepProjectile(shot, dt)
+    var weapon = Weapons.byId(shot.weaponId)
+    pushTrail(shot)
+
+    if (Physics.outOfBounds(shot, state.width, state.height)) {
+        state.projectile = null
+        endTurn(state)
+        return true
+    }
+
+    if (weapon.kind === "airburst" && !shot.rolling) {
+        var ground = Terrain.sampleHeight(state.heights, shot.x)
+        if (shot.vy > 0 && shot.y >= ground - (weapon.fuseHeight || 48)) {
+            detonate(state, shot, weapon, shot.x, shot.y)
+            return true
         }
     }
 
-    if (hitTank) {
+    if (findHitTank(state, shot)) {
         detonate(state, shot, weapon, shot.x, shot.y)
-        return
+        return true
     }
 
-    if (Physics.hitsTerrain(shot, Terrain.sampleHeight, state.heights)) {
-        var cx = shot.x
-        var cy = Terrain.sampleHeight(state.heights, cx)
-        if (weapon.kind === "roller" && !shot.rolling) {
-            beginRoll(state, shot, weapon)
-            return
-        }
-        if (shot.rolling) {
-            shot.rollsLeft -= 1
-            shot.y = cy - shot.radius
-            var slope2 = Terrain.slopeAt(state.heights, shot.x)
-            shot.vx += slope2 * 6
-            shot.vy = Math.min(shot.vy, 0)
-            if (shot.rollsLeft <= 0 || Math.abs(shot.vx) < 18) {
-                detonate(state, shot, weapon, cx, cy)
-                return
-            }
-            return
-        }
-        detonate(state, shot, weapon, cx, cy)
+    if (!Physics.hitsTerrain(shot, Terrain.sampleHeight, state.heights))
+        return true
+
+    var cx = shot.x
+    var cy = Terrain.sampleHeight(state.heights, cx)
+    if (weapon.kind === "roller" && !shot.rolling) {
+        beginRoll(state, shot, weapon)
+        return true
     }
+    if (shot.rolling) {
+        shot.rollsLeft -= 1
+        shot.y = cy - shot.radius
+        shot.vx += Terrain.slopeAt(state.heights, shot.x) * 6
+        shot.vy = Math.min(shot.vy, 0)
+        if (shot.rollsLeft <= 0 || Math.abs(shot.vx) < 18)
+            detonate(state, shot, weapon, cx, cy)
+        return true
+    }
+    detonate(state, shot, weapon, cx, cy)
+    return true
 }
 
 function tickResolve(state, dt) {
-    if (state.phase !== "resolve")
-        return
     state._resolveWait -= dt
     if (state._resolveWait <= 0)
         endTurn(state)
+    return true
 }
 
-function tickExplosions(state, dt) {
-    var kept = []
-    for (var i = 0; i < state.explosions.length; i++) {
-        var e = state.explosions[i]
-        e.age += dt
-        if (e.age < e.life)
-            kept.push(e)
-    }
-    state.explosions = kept
-}
-
-function tickSparks(state, dt) {
-    var kept = []
-    for (var i = 0; i < state.sparks.length; i++) {
-        var s = state.sparks[i]
-        s.age += dt
-        s.vy += 280 * dt
-        s.x += s.vx * dt
-        s.y += s.vy * dt
-        if (s.age < s.life)
-            kept.push(s)
-    }
-    state.sparks = kept
-}
+function tickExplosions(state, dt) { return Effects.tickExplosions(state, dt) }
+function tickSparks(state, dt) { return Effects.tickSparks(state, dt) }
 
 function tick(state, dt) {
-    tickExplosions(state, dt)
-    tickSparks(state, dt)
+    var fx = Effects.tickExplosions(state, dt) | Effects.tickSparks(state, dt)
     if (state.phase === "flight")
-        tickFlight(state, dt)
-    else if (state.phase === "resolve")
-        tickResolve(state, dt)
+        return tickFlight(state, dt) || fx
+    if (state.phase === "resolve")
+        return tickResolve(state, dt) || fx
+    return fx
 }
 
 function aimPreview(state) {

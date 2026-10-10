@@ -1,7 +1,7 @@
 {
   "name": "ridge_fire",
   "display_name": "Ridge Fire",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "ui_qml",
   "category": "games",
   "description": "Turn-based artillery duel across a destructible ridge. Local hotseat or online host/join via Logos delivery.",
