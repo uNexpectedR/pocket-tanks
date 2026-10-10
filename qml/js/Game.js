@@ -18,6 +18,7 @@ function createMatch(width, height, seed) {
         height: height,
         seed: seed === undefined ? 0 : seed,
         heights: heights,
+        terrainRev: 0,
         turn: 0,
         phase: "aim",
         winner: -1,
@@ -26,8 +27,11 @@ function createMatch(width, height, seed) {
         projectile: null,
         explosions: [],
         sparks: [],
+        muzzles: [],
         fireSeq: 0,
         lastAppliedSeq: -1,
+        _aimCacheKey: "",
+        _aimCachePts: null,
         tanks: [
             tankSpec(0, "Amber", left, 1, "#c48c48", "#e2b57a"),
             tankSpec(1, "Slate", right, -1, "#6e8b92", "#9cb8be")
@@ -117,7 +121,7 @@ function resettleTanks(state) {
 }
 
 function launchShot(state, tank, weapon, angle, power) {
-    var muzzle = Physics.muzzlePoint(tank.x, tank.y, angle, tank.facing, 28)
+    var muzzle = Physics.muzzlePoint(tank.x, tank.y, angle, tank.facing, 30)
     var vel = Physics.launchVelocity(angle, power, tank.facing)
     state.projectile = {
         x: muzzle.x,
@@ -136,7 +140,10 @@ function launchShot(state, tank, weapon, angle, power) {
     }
     state.phase = "flight"
     state.message = tank.name + " fires " + weapon.name
-    Effects.spawnSparks(state, muzzle.x, muzzle.y, 6, tank.accent)
+    state._aimCacheKey = ""
+    state._aimCachePts = null
+    Effects.pushMuzzle(state, muzzle.x, muzzle.y, angle * Math.PI / 180, tank.facing)
+    Effects.spawnSparks(state, muzzle.x, muzzle.y, 8, tank.accent)
 }
 
 function fire(state) {
@@ -204,9 +211,10 @@ function reshapeTerrain(state, cx, cy, weapon) {
         Terrain.carveCrater(state.heights, cx, weapon.craterRadius, 1.15)
         Terrain.pileDirt(state.heights, cx + 18, weapon.pileRadius || 36, weapon.pileHeight || 28, 36)
         Terrain.pileDirt(state.heights, cx - 18, (weapon.pileRadius || 36) * 0.7, (weapon.pileHeight || 28) * 0.55, 36)
-        return
+    } else {
+        Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.kind === "airburst" ? 0.65 : 1)
     }
-    Terrain.carveCrater(state.heights, cx, weapon.craterRadius, weapon.kind === "airburst" ? 0.65 : 1)
+    state.terrainRev = (state.terrainRev || 0) + 1
 }
 
 function applyBlast(state, cx, cy, weapon) {
@@ -275,9 +283,13 @@ function beginRoll(state, shot, weapon) {
 }
 
 function pushTrail(shot) {
+    // Reuse point objects when at capacity — avoids per-frame alloc + shift.
     if (shot.trailLen >= TRAIL_MAX) {
-        shot.trail.shift()
-        shot.trailLen--
+        var oldest = shot.trail.shift()
+        oldest.x = shot.x
+        oldest.y = shot.y
+        shot.trail.push(oldest)
+        return
     }
     shot.trail.push({ x: shot.x, y: shot.y })
     shot.trailLen++
@@ -354,7 +366,7 @@ function tickExplosions(state, dt) { return Effects.tickExplosions(state, dt) }
 function tickSparks(state, dt) { return Effects.tickSparks(state, dt) }
 
 function tick(state, dt) {
-    var fx = Effects.tickExplosions(state, dt) | Effects.tickSparks(state, dt)
+    var fx = Effects.tickAll(state, dt)
     if (state.phase === "flight")
         return tickFlight(state, dt) || fx
     if (state.phase === "resolve")
@@ -366,9 +378,15 @@ function aimPreview(state) {
     if (state.phase !== "aim")
         return []
     var tank = activeTank(state)
-    var muzzle = Physics.muzzlePoint(tank.x, tank.y, tank.angle, tank.facing, 28)
+    var key = tank.id + ":" + tank.angle + ":" + tank.power + ":" + (state.terrainRev || 0)
+    if (state._aimCacheKey === key && state._aimCachePts)
+        return state._aimCachePts
+    var muzzle = Physics.muzzlePoint(tank.x, tank.y, tank.angle, tank.facing, 30)
     var vel = Physics.launchVelocity(tank.angle, tank.power, tank.facing)
-    return Physics.predictArc(muzzle, vel.vx, vel.vy, state.heights, Terrain.sampleHeight, state.width, 36)
+    var pts = Physics.predictArc(muzzle, vel.vx, vel.vy, state.heights, Terrain.sampleHeight, state.width, 32)
+    state._aimCacheKey = key
+    state._aimCachePts = pts
+    return pts
 }
 
 function restart(width, height, seed) {
