@@ -3,7 +3,7 @@
 /*! Projectile integration and hit tests. */
 
 var GRAVITY = 420
-var MAX_FLIGHT_TIME = 12
+var MAX_FLIGHT_TIME = 14
 
 function launchVelocity(angleDeg, power, facing) {
     var rad = angleDeg * Math.PI / 180
@@ -26,8 +26,13 @@ function muzzlePoint(tankX, tankY, angleDeg, facing, barrelLen) {
 }
 
 function stepProjectile(shot, dt) {
-    shot.vx += 0
-    shot.vy += GRAVITY * dt
+    if (!shot.rolling) {
+        shot.vx += 0
+        shot.vy += GRAVITY * dt
+    } else {
+        shot.vy += GRAVITY * dt * 0.35
+        shot.vx *= shot.friction === undefined ? 0.985 : shot.friction
+    }
     shot.x += shot.vx * dt
     shot.y += shot.vy * dt
     shot.age += dt
