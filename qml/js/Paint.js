@@ -120,19 +120,19 @@ function terrain(ctx, heights, w, h) {
     }
     ctx.restore()
 
-    // Sage grass crest — combat-readable silhouette (not rose/pink).
+    // Sage grass crest — combat-readable silhouette (rgba: Qt Canvas rejects #RRGGBBAA).
     ctx.beginPath()
     ctx.moveTo(0, heights[0])
     for (var j = 1; j < n; j++)
         ctx.lineTo(j, heights[j])
-    ctx.strokeStyle = "#8fa87acc"
-    ctx.lineWidth = 2.4
+    ctx.strokeStyle = "rgba(143, 168, 122, 0.92)"
+    ctx.lineWidth = 2.6
     ctx.stroke()
     ctx.beginPath()
     ctx.moveTo(0, heights[0] + 1.5)
     for (var k = 1; k < n; k++)
         ctx.lineTo(k, heights[k] + 1.5)
-    ctx.strokeStyle = "#4a5a3888"
+    ctx.strokeStyle = "rgba(74, 90, 56, 0.55)"
     ctx.lineWidth = 3
     ctx.stroke()
 }

@@ -1,7 +1,7 @@
 {
   "name": "ridge_fire",
   "display_name": "Ridge Fire",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "ui_qml",
   "category": "games",
   "description": "Turn-based artillery duel across a destructible ridge. Nine weapons, fairer hits, sage crest, random callsigns, local hotseat or online host/join via Logos delivery.",
