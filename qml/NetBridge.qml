@@ -1,15 +1,12 @@
 import QtQuick 2.15
 import "js/Net.js" as Net
+import "js/Delivery.js" as Delivery
 
-/*!
-  Host/join over Logos delivery_module (Basecamp / standalone).
-  Pure QML: logos.callModuleAsync + logos.onModuleEvent.
-  Falls back cleanly when `logos` is missing (qmlscene preview).
-*/
+/*! Room host/join over Logos delivery_module. UI state only — IPC in Delivery.js. */
 Item {
     id: root
 
-    property string role: "none"          // none | local | host | guest
+    property string role: "none"   // none | local | host | guest
     property string roomCode: ""
     property string senderId: ""
     property string status: "idle"
@@ -17,184 +14,77 @@ Item {
     property bool nodeReady: false
     property bool roomReady: false
     property bool peerPresent: false
-    property int localSeat: 0             // host=0 Amber, guest=1 Slate
+    property int localSeat: 0
     property int matchSeed: 0
     property bool matchStarted: false
     property bool logosAvailable: false
 
     readonly property string topic: roomCode ? Net.topicForRoom(roomCode) : ""
+    readonly property var logosApi: typeof logos !== "undefined" ? logos : null
 
     signal matchReady(int seed)
     signal remoteFire(var msg)
-    signal peerHello(var msg)
     signal netError(string message)
 
-    function _hasLogos() {
-        return typeof logos !== "undefined" && logos !== null
-    }
-
-    function _setStatus(s, d) {
+    function setStatus(s, d) {
         status = s
         detail = d || ""
     }
 
-    function _call(method, args, onOk, onFail) {
-        if (!_hasLogos()) {
+    function callDelivery(method, args, onOk, onFail) {
+        Delivery.call(logosApi, method, args, onOk, function (err) {
             if (onFail)
-                onFail("Logos bridge unavailable (run inside Basecamp)")
-            return
-        }
-        logos.callModuleAsync("delivery_module", method, args || [], function (payload) {
-            var result = null
-            try {
-                result = typeof payload === "string" ? JSON.parse(payload) : payload
-            } catch (e) {
-                result = { raw: payload }
-            }
-            // LogosResult-shaped or plain string error conventions vary by host.
-            var ok = true
-            var err = ""
-            if (result && typeof result === "object") {
-                if (result.success === false) {
-                    ok = false
-                    err = result.error || result.message || "call failed"
-                } else if (result.error && !result.success) {
-                    ok = false
-                    err = String(result.error)
-                }
-            }
-            if (ok) {
-                if (onOk)
-                    onOk(result)
-            } else {
-                if (onFail)
-                    onFail(err)
-                else
-                    root.netError(err)
-            }
-        }, function (err) {
-            var msg = err ? String(err) : "delivery_module call failed"
-            if (onFail)
-                onFail(msg)
+                onFail(err)
             else
-                root.netError(msg)
+                root.netError(err)
         })
-    }
-
-    function armEvents() {
-        if (!_hasLogos())
-            return false
-        logosAvailable = true
-        logos.onModuleEvent("delivery_module", "messageReceived")
-        logos.onModuleEvent("delivery_module", "connectionStateChanged")
-        logos.onModuleEvent("delivery_module", "messageError")
-        logos.onModuleEvent("delivery_module", "nodeStarted")
-        return true
     }
 
     function ensureNode(done) {
-        if (!_hasLogos()) {
-            _setStatus("error", "Online play needs Logos Basecamp with delivery_module")
+        if (!Delivery.available(logosApi)) {
+            setStatus("error", "Online play needs Logos Basecamp with delivery_module")
             if (done)
                 done(false)
             return
         }
-        armEvents()
-        _setStatus("connecting", "Starting Logos delivery node (logos.dev)…")
-        _call("getNodeInfo", ["IsRunning"], function (info) {
-            var running = false
-            if (info === true || info === "true")
-                running = true
-            else if (info && info.value !== undefined)
-                running = String(info.value) === "true" || info.value === true
-            else if (info && info.result !== undefined)
-                running = String(info.result) === "true"
-            if (running) {
-                root.nodeReady = true
-                _setStatus("online", "Delivery node already running")
-                if (done)
-                    done(true)
-                return
-            }
-            var cfg = Net.nodeConfigJson()
-            _call("createNode", [cfg], function () {
-                _call("start", [], function () {
-                    root.nodeReady = true
-                    _setStatus("online", "Connected to logos.dev")
-                    if (done)
-                        done(true)
-                }, function (e) {
-                    // start may be async; treat soft failure if nodeStarted arrives
-                    _setStatus("connecting", "Waiting for node… " + e)
-                    root.nodeReady = true
-                    if (done)
-                        done(true)
-                })
-            }, function (e) {
-                // Node may already exist from another module.
-                if (String(e).toLowerCase().indexOf("already") >= 0) {
-                    _call("start", [], function () {
-                        root.nodeReady = true
-                        _setStatus("online", "Joined existing delivery node")
-                        if (done)
-                            done(true)
-                    }, function () {
-                        root.nodeReady = true
-                        _setStatus("online", "Using existing delivery node")
-                        if (done)
-                            done(true)
-                    })
-                } else {
-                    _setStatus("error", e)
-                    root.netError(e)
-                    if (done)
-                        done(false)
-                }
-            })
-        }, function () {
-            // getNodeInfo missing — try create anyway
-            var cfg = Net.nodeConfigJson()
-            _call("createNode", [cfg], function () {
-                _call("start", [], function () {
-                    root.nodeReady = true
-                    _setStatus("online", "Connected to logos.dev")
-                    if (done)
-                        done(true)
-                }, function (e) {
-                    root.nodeReady = true
-                    _setStatus("online", "Node starting…")
-                    if (done)
-                        done(true)
-                })
-            }, function (e) {
-                _setStatus("error", e)
+        Delivery.armEvents(logosApi)
+        logosAvailable = true
+        setStatus("connecting", "Starting Logos delivery node (logos.dev)…")
+        Delivery.bringUp(logosApi, Net.nodeConfigJson(), function (ok, note) {
+            if (!ok) {
+                setStatus("error", note)
+                root.netError(note)
                 if (done)
                     done(false)
-            })
+                return
+            }
+            nodeReady = true
+            setStatus("online", note)
+            if (done)
+                done(true)
         })
     }
 
-    function _subscribe(done) {
-        _call("subscribe", [topic], function () {
-            root.roomReady = true
-            _setStatus("room", "Room " + roomCode + " — waiting for peer")
+    function subscribeRoom(done) {
+        callDelivery("subscribe", [topic], function () {
+            roomReady = true
+            setStatus("room", "Room " + roomCode + " — waiting for peer")
             if (done)
                 done(true)
         }, function (e) {
-            _setStatus("error", "Subscribe failed: " + e)
+            setStatus("error", "Subscribe failed: " + e)
             if (done)
                 done(false)
         })
     }
 
-    function _send(obj) {
+    function send(obj) {
         if (!topic)
             return
         obj.sid = senderId
         obj.room = roomCode
-        var payload = Net.encodeMessage(obj)
-        _call("send", [topic, payload], function () {}, function (e) {
-            _setStatus("warn", "Send failed: " + e)
+        callDelivery("send", [topic, Net.encodeMessage(obj)], function () {}, function (e) {
+            setStatus("warn", "Send failed: " + e)
         })
     }
 
@@ -205,7 +95,7 @@ Item {
         peerPresent = false
         matchStarted = false
         localSeat = 0
-        _setStatus("local", "Hotseat — pass the keyboard")
+        setStatus("local", "Hotseat — pass the keyboard")
     }
 
     function hostGame() {
@@ -219,11 +109,11 @@ Item {
         ensureNode(function (ok) {
             if (!ok)
                 return
-            _subscribe(function (ok2) {
+            subscribeRoom(function (ok2) {
                 if (!ok2)
                     return
-                _send({ t: "hello", role: "host", seed: matchSeed })
-                _setStatus("room", "Share code " + roomCode + " — waiting for guest")
+                send({ t: "hello", role: "host", seed: matchSeed })
+                setStatus("room", "Share code " + roomCode + " — waiting for guest")
             })
         })
     }
@@ -236,93 +126,85 @@ Item {
         matchStarted = false
         peerPresent = false
         if (roomCode.length < 4) {
-            _setStatus("error", "Enter a valid room code")
+            setStatus("error", "Enter a valid room code")
             return
         }
         ensureNode(function (ok) {
             if (!ok)
                 return
-            _subscribe(function (ok2) {
+            subscribeRoom(function (ok2) {
                 if (!ok2)
                     return
-                _send({ t: "hello", role: "guest" })
-                _setStatus("room", "Joined " + roomCode + " — waiting for host")
+                send({ t: "hello", role: "guest" })
+                setStatus("room", "Joined " + roomCode + " — waiting for host")
             })
         })
     }
 
     function broadcastFire(intent) {
-        if (role === "local" || !intent)
-            return
-        _send(intent)
+        if (role !== "local" && intent)
+            send(intent)
     }
 
-    function broadcastStart() {
-        if (role !== "host")
-            return
-        _send({ t: "start", seed: matchSeed })
+    function startMatchAsHost() {
+        send({ t: "start", seed: matchSeed })
         matchStarted = true
-        root.matchReady(matchSeed)
+        matchReady(matchSeed)
+    }
+
+    function onHello(msg) {
+        peerPresent = true
+        if (role === "host" && msg.role === "guest") {
+            setStatus("room", "Guest joined — starting match")
+            startMatchAsHost()
+        } else if (role === "guest" && msg.role === "host") {
+            if (msg.seed !== undefined)
+                matchSeed = msg.seed
+            setStatus("room", "Host found — waiting for start")
+            send({ t: "hello", role: "guest" })
+        }
     }
 
     function handleIncoming(rawTopic, rawPayload) {
         if (topic && rawTopic && String(rawTopic) !== topic)
             return
         var msg = Net.decodeMessage(rawPayload)
-        if (!msg || !msg.t)
+        if (!msg || !msg.t || Net.isOwnEcho(msg, senderId))
             return
-        if (Net.isOwnEcho(msg, senderId))
-            return
-        if (msg.t === "hello") {
-            peerPresent = true
-            peerHello(msg)
-            if (role === "host" && msg.role === "guest") {
-                _setStatus("room", "Guest joined — starting match")
-                broadcastStart()
-            } else if (role === "guest" && msg.role === "host") {
-                if (msg.seed !== undefined)
-                    matchSeed = msg.seed
-                _setStatus("room", "Host found — waiting for start")
-                _send({ t: "hello", role: "guest" })
-            }
-        } else if (msg.t === "start") {
+        if (msg.t === "hello")
+            onHello(msg)
+        else if (msg.t === "start") {
             if (msg.seed !== undefined)
                 matchSeed = msg.seed
             matchStarted = true
-            _setStatus("play", "Online match live")
-            root.matchReady(matchSeed)
+            setStatus("play", "Online match live")
+            matchReady(matchSeed)
         } else if (msg.t === "fire") {
-            root.remoteFire(msg)
+            remoteFire(msg)
         }
     }
 
     Connections {
-        target: _hasLogos() ? logos : null
+        target: root.logosApi
         ignoreUnknownSignals: true
         function onModuleEventReceived(moduleName, eventName, data) {
             if (moduleName !== "delivery_module")
                 return
-            if (eventName === "connectionStateChanged") {
-                var st = data && data.length ? String(data[0]) : ""
-                if (st)
-                    root._setStatus(root.roomReady ? "room" : "online", "Link: " + st)
-            } else if (eventName === "messageReceived") {
-                // data: [hash, topic, payload, source, ts] (order from delivery docs)
-                var t = data && data.length > 1 ? data[1] : ""
-                var payload = data && data.length > 2 ? data[2] : ""
-                root.handleIncoming(t, payload)
-            } else if (eventName === "messageError") {
-                var err = data && data.length > 2 ? String(data[2]) : "message error"
-                root._setStatus("warn", err)
-            } else if (eventName === "nodeStarted") {
+            var ev = Delivery.eventPayload(data)
+            if (eventName === "connectionStateChanged" && ev.linkState)
+                root.setStatus(root.roomReady ? "room" : "online", "Link: " + ev.linkState)
+            else if (eventName === "messageReceived")
+                root.handleIncoming(ev.topic, ev.payload)
+            else if (eventName === "messageError")
+                root.setStatus("warn", ev.errorText || "message error")
+            else if (eventName === "nodeStarted")
                 root.nodeReady = true
-            }
         }
     }
 
     Component.onCompleted: {
-        logosAvailable = _hasLogos()
+        logosAvailable = Delivery.available(logosApi)
         if (logosAvailable)
-            armEvents()
+            Delivery.armEvents(logosApi)
     }
 }

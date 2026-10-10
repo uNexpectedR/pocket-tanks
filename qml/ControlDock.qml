@@ -240,18 +240,25 @@ Item {
         }
     }
 
+    function syncWeaponBox() {
+        var ids = weaponBox.weaponIds
+        for (var i = 0; i < ids.length; i++) {
+            if (ids[i] === root.weaponId && weaponBox.currentIndex !== i) {
+                weaponBox.currentIndex = i
+                return
+            }
+        }
+    }
+
     Timer {
-        interval: 80
+        interval: 100
         running: true
         repeat: true
         onTriggered: {
-            if (!angleSlider.pressed && !powerSlider.pressed)
-                root.syncFromMatch()
-            var ids = weaponBox.weaponIds
-            for (var i = 0; i < ids.length; i++) {
-                if (ids[i] === root.weaponId && weaponBox.currentIndex !== i)
-                    weaponBox.currentIndex = i
-            }
+            if (angleSlider.pressed || powerSlider.pressed)
+                return
+            root.syncFromMatch()
+            root.syncWeaponBox()
         }
     }
 }

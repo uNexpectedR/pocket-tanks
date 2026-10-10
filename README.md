@@ -84,16 +84,17 @@ https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).
-2. Package Manager → **Ridge Fire** `0.2.0` → Install (allow unsigned if prompted).
+2. Package Manager → **Ridge Fire** `0.2.1` → Install (allow unsigned if prompted).
 3. Open Ridge Fire from the sidebar.
 4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
 `trustedSigners` remains empty (unsigned packages).
 
-## What’s in 0.2.0
+## What’s in 0.2.x
 
 - Richer sky/terrain contrast, tank silhouettes, juice on shots/explosions
 - Readable HUD (angle / power / HP / weapon / turn)
 - Four weapons
 - Online host/join + local hotseat lobby
+- Small JS modules (`Physics`, `Weapons`, `Delivery`, `Paint`, `Effects`, `Game`, `Net`)
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)
