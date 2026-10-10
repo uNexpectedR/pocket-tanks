@@ -50,7 +50,47 @@ Item {
         anchors.fill: parent
         visible: root.screen === "play"
         opacity: visible ? 1 : 0
+        focus: visible
+        activeFocusOnTab: true
         Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+
+        // Keys on the play surface — avoid a full-screen FocusScope overlay.
+        Keys.onPressed: function (event) {
+            if (!field.match)
+                return
+            if (field.match.phase === "over" && (event.key === Qt.Key_Return || event.key === Qt.Key_Space)) {
+                root.screen = "lobby"
+                event.accepted = true
+                return
+            }
+            if (field.match.phase !== "aim")
+                return
+            if (event.key === Qt.Key_Left) {
+                field.nudgeAngle(event.modifiers & Qt.ShiftModifier ? -5 : -1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Right) {
+                field.nudgeAngle(event.modifiers & Qt.ShiftModifier ? 5 : 1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Down) {
+                field.nudgePower(event.modifiers & Qt.ShiftModifier ? -5 : -1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Up) {
+                field.nudgePower(event.modifiers & Qt.ShiftModifier ? 5 : 1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Q) {
+                field.cycleWeapon(event.modifiers & Qt.ShiftModifier ? -1 : 1)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Space || event.key === Qt.Key_Return) {
+                field.fire()
+                event.accepted = true
+            } else if (event.key === Qt.Key_Escape) {
+                root.screen = "lobby"
+                event.accepted = true
+            } else if (event.key === Qt.Key_R && net.role === "local") {
+                field.restart()
+                event.accepted = true
+            }
+        }
 
         Text {
             id: brand
@@ -92,6 +132,7 @@ Item {
 
         ControlDock {
             id: dock
+            z: 5
             battlefield: field
             anchors.left: parent.left
             anchors.right: parent.right
@@ -102,46 +143,10 @@ Item {
                 field.match = null
             }
         }
-    }
 
-    FocusScope {
-        anchors.fill: parent
-        focus: true
-        Keys.onPressed: function (event) {
-            if (root.screen !== "play" || !field.match)
-                return
-            if (field.match.phase === "over" && (event.key === Qt.Key_Return || event.key === Qt.Key_Space)) {
-                root.screen = "lobby"
-                event.accepted = true
-                return
-            }
-            if (field.match.phase !== "aim")
-                return
-            if (event.key === Qt.Key_Left) {
-                field.nudgeAngle(event.modifiers & Qt.ShiftModifier ? -5 : -1)
-                event.accepted = true
-            } else if (event.key === Qt.Key_Right) {
-                field.nudgeAngle(event.modifiers & Qt.ShiftModifier ? 5 : 1)
-                event.accepted = true
-            } else if (event.key === Qt.Key_Down) {
-                field.nudgePower(event.modifiers & Qt.ShiftModifier ? -5 : -1)
-                event.accepted = true
-            } else if (event.key === Qt.Key_Up) {
-                field.nudgePower(event.modifiers & Qt.ShiftModifier ? 5 : 1)
-                event.accepted = true
-            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Q) {
-                field.cycleWeapon(event.modifiers & Qt.ShiftModifier ? -1 : 1)
-                event.accepted = true
-            } else if (event.key === Qt.Key_Space || event.key === Qt.Key_Return) {
-                field.fire()
-                event.accepted = true
-            } else if (event.key === Qt.Key_Escape) {
-                root.screen = "lobby"
-                event.accepted = true
-            } else if (event.key === Qt.Key_R && net.role === "local") {
-                field.restart()
-                event.accepted = true
-            }
+        onVisibleChanged: {
+            if (visible)
+                forceActiveFocus()
         }
     }
 }

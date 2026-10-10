@@ -104,6 +104,7 @@ Item {
                 id: weaponBox
                 Layout.fillWidth: true
                 enabled: canAim && !gameOver
+                focusPolicy: Qt.NoFocus
                 model: ["HE Shell", "Dirt Mover", "Ridge Roller", "Sky Burster"]
                 property var weaponIds: ["he", "dirt", "roller", "burster"]
                 onActivated: {
@@ -223,14 +224,8 @@ Item {
                 id: fireBtn
                 text: gameOver ? "Again" : "Fire"
                 enabled: gameOver || canAim
-                onClicked: {
-                    if (gameOver) {
-                        root.menuRequested()
-                    } else if (battlefield) {
-                        battlefield.fire()
-                    }
-                    root.syncFromMatch()
-                }
+                focusPolicy: Qt.NoFocus
+                onClicked: root.triggerFire()
                 contentItem: Text {
                     text: fireBtn.text
                     color: "#12161c"
@@ -249,6 +244,15 @@ Item {
                 }
             }
         }
+    }
+
+    function triggerFire() {
+        if (gameOver) {
+            root.menuRequested()
+        } else if (battlefield) {
+            battlefield.fire()
+        }
+        root.syncFromMatch()
     }
 
     function syncWeaponBox() {
