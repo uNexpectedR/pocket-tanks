@@ -78,7 +78,7 @@ https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).
-2. Package Manager → **Ridge Fire** `0.3.0` → Install (allow unsigned if prompted).
+2. Package Manager → **Ridge Fire** `0.3.1` → Install (allow unsigned if prompted).
 3. Open Ridge Fire from the sidebar.
 4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
@@ -91,5 +91,6 @@ https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
 - Munition trails, multi-ring blasts, sparks — readable in combat
 - Layered canvas paint (sky / terrain / play) — terrain only redraws on crater
 - In-place FX tick compaction, aim-arc cache, no shadowBlur on hot path
+- Input fix: keys/Fire on the play surface (no full-screen FocusScope overlay)
 - Online host/join + local hotseat lobby (unchanged delivery path)
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)
