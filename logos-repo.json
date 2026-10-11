@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "pocket-tanks",
-  "displayName": "Ridge Fire",
-  "description": "Ridge Fire — turn-based artillery ui_qml module for Logos Basecamp.",
+  "displayName": "Logos Basecamp Games",
+  "description": "Logos Basecamp games catalog: Logos Runner (endless runner) and Ridge Fire (artillery).",
   "homepage": "https://github.com/uNexpectedR/pocket-tanks",
   "indexUrl": "https://github.com/uNexpectedR/pocket-tanks/releases/download/index/index.json",
   "trustedSigners": []

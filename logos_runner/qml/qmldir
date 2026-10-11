@@ -1,0 +1,5 @@
+singleton Theme 1.0 Theme.qml
+ScoreBridge 1.0 ScoreBridge.qml
+LoginView 1.0 LoginView.qml
+RunView 1.0 RunView.qml
+BoardView 1.0 BoardView.qml

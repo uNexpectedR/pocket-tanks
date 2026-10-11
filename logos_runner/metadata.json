@@ -1,0 +1,26 @@
+{
+  "name": "logos_runner",
+  "display_name": "Logos Runner",
+  "version": "0.1.0",
+  "type": "ui_qml",
+  "category": "games",
+  "description": "Cyberpunk endless runner for Logos Basecamp. Sign in with a callsign, race the neon strip, and climb the competitive board (local + delivery_module sync).",
+  "view": "qml/Main.qml",
+  "icon": "src/icons/icon.png",
+  "dependencies": [],
+  "provides": [],
+  "uses": [],
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
