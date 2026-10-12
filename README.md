@@ -81,7 +81,7 @@ Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (sof
 Paste repository URL:
 
 ```text
-https://raw.githubusercontent.com/uNexpectedR/pocket-tanks/main/logos-repo.json
+https://raw.githubusercontent.com/uNexpectedR/ridge-fire/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).

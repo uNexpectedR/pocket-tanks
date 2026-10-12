@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "name": "pocket-tanks",
+  "name": "ridge-fire",
   "displayName": "Ridge Fire",
   "description": "Ridge Fire — turn-based artillery ui_qml module for Logos Basecamp.",
-  "homepage": "https://github.com/uNexpectedR/pocket-tanks",
-  "indexUrl": "https://github.com/uNexpectedR/pocket-tanks/releases/download/index/index.json",
+  "homepage": "https://github.com/uNexpectedR/ridge-fire",
+  "indexUrl": "https://github.com/uNexpectedR/ridge-fire/releases/download/index/index.json",
   "trustedSigners": []
 }
