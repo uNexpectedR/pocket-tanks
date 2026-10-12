@@ -4,6 +4,8 @@ Turn-based artillery duel for **Logos Basecamp** (`ui_qml` module). Aim, fire, r
 
 Original game inspired by the artillery genre. No Pocket Tanks assets or IP.
 
+Licensed under the [MIT License](LICENSE).
+
 ## Stack
 
 | File | Role |
