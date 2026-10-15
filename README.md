@@ -95,5 +95,6 @@ https://raw.githubusercontent.com/uNexpectedR/ridge-fire/main/logos-repo.json
 
 - Online room popup: Host shows code + **Copy**; Join has paste-friendly field + **Join**
 - Delivery bring-up waits for `nodeStarted` / `IsRunning`, with a **25s timeout** and clear error (no infinite “starting…”)
+- Lobby **Play offline · local hotseat** button — larger, high-contrast bone fill next to Host/Join
 - Nine curated weapons, fairer hits, sage crest, callsigns, taller dock (from 0.4.x)
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)
