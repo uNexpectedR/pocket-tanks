@@ -41,8 +41,17 @@ Item {
             field.restart()
             root.screen = "play"
         }
-        onHostOnline: net.hostGame()
-        onJoinOnline: function (code) { net.joinGame(code) }
+        onHostOnline: roomDialog.openHost()
+        onJoinOnline: roomDialog.openJoin()
+    }
+
+    OnlineRoomDialog {
+        id: roomDialog
+        anchors.fill: parent
+        visible: open && root.screen === "lobby"
+        net: net
+        onHostRequested: net.hostGame()
+        onJoinRequested: function (code) { net.joinGame(code) }
     }
 
     Item {

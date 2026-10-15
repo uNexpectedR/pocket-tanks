@@ -46,15 +46,15 @@ Requires **Logos Basecamp** with **`delivery_module`** installed and loaded (sof
 
 ### Host
 
-1. Open **Ridge Fire** → **Host online match**.
-2. Wait until the status shows a **room code** (6 characters).
-3. Share that code with the other player.
+1. Open **Ridge Fire** → **Host online**.
+2. A popup shows your **room code** — tap **Copy code** and send it to the other player.
+3. Wait until status says the room is ready (or a clear error if delivery fails).
 4. When the guest joins, the match starts automatically (left seat).
 
 ### Guest
 
-1. Open **Ridge Fire** on the second Mac.
-2. Enter the host’s room code → **Join**.
+1. Open **Ridge Fire** on the second Mac → **Join online**.
+2. **Paste** the host’s room code → **Join**.
 3. Match starts when the host receives your hello (right seat).
 4. Take turns — only your seat can aim/fire; the other Mac mirrors shots over delivery.
 
@@ -85,18 +85,15 @@ https://raw.githubusercontent.com/uNexpectedR/ridge-fire/main/logos-repo.json
 ```
 
 1. **Settings → Package Repositories → Add repository** (or refresh if already added).
-2. Package Manager → **Ridge Fire** `0.4.1` → Install (allow unsigned if prompted).
+2. Package Manager → **Ridge Fire** `0.4.2` → Install (allow unsigned if prompted).
 3. Open Ridge Fire from the sidebar.
 4. For online play: load **delivery_module** (Module Inspector) if Host/Join errors.
 
 `trustedSigners` remains empty (unsigned packages).
 
-## What’s in 0.4.x
+## What’s in 0.4.2
 
-- Nine curated weapons with distinct effects
-- Fairer hits: ellipse hull, direct vs splash, radius-aware terrain, flight substeps
-- Sage green crest (grass line)
-- Seeded random callsigns each match
-- Taller, more readable control bar
-- Layered canvas paint + FX compaction from 0.3.x
+- Online room popup: Host shows code + **Copy**; Join has paste-friendly field + **Join**
+- Delivery bring-up waits for `nodeStarted` / `IsRunning`, with a **25s timeout** and clear error (no infinite “starting…”)
+- Nine curated weapons, fairer hits, sage crest, callsigns, taller dock (from 0.4.x)
 - Multi-arch `.lgx` (darwin-arm64 / amd64 / x86_64, linux-amd64 / arm64)

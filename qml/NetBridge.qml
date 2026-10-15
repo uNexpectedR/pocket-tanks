@@ -18,6 +18,7 @@ Item {
     property int matchSeed: 0
     property bool matchStarted: false
     property bool logosAvailable: false
+    property bool bringUpBusy: false
 
     readonly property string topic: roomCode ? Net.topicForRoom(roomCode) : ""
     readonly property var logosApi: typeof logos !== "undefined" ? logos : null
@@ -25,6 +26,9 @@ Item {
     signal matchReady(int seed)
     signal remoteFire(var msg)
     signal netError(string message)
+    signal roomPrepared()
+
+    property var _ensureDone: null
 
     function setStatus(s, d) {
         status = s
@@ -40,28 +44,86 @@ Item {
         })
     }
 
+    function clearBringUpTimers() {
+        bringUpWatchdog.stop()
+        runningPoll.stop()
+    }
+
+    function finishEnsure(ok, note) {
+        if (!bringUpBusy)
+            return
+        bringUpBusy = false
+        clearBringUpTimers()
+        var cb = _ensureDone
+        _ensureDone = null
+        if (!ok) {
+            nodeReady = false
+            setStatus("error", note || "Delivery node failed to start")
+            root.netError(detail)
+            if (cb)
+                cb(false)
+            return
+        }
+        nodeReady = true
+        setStatus("online", note || "Connected to logos.dev")
+        if (cb)
+            cb(true)
+    }
+
+    function markRunning(note) {
+        finishEnsure(true, note || "Connected to logos.dev")
+    }
+
+    function beginWaitForRunning(hint) {
+        setStatus("connecting", hint || "Waiting for delivery node…")
+        runningPoll.restart()
+        Delivery.checkRunning(logosApi, function (running) {
+            if (running)
+                markRunning("Delivery node ready")
+        })
+    }
+
     function ensureNode(done) {
+        if (bringUpBusy) {
+            if (done)
+                done(false)
+            return
+        }
         if (!Delivery.available(logosApi)) {
             setStatus("error", "Online play needs Logos Basecamp with delivery_module")
             if (done)
                 done(false)
             return
         }
+        if (nodeReady) {
+            if (done)
+                done(true)
+            return
+        }
+
+        _ensureDone = done
+        bringUpBusy = true
         Delivery.armEvents(logosApi)
         logosAvailable = true
         setStatus("connecting", "Starting Logos delivery node (logos.dev)…")
-        Delivery.bringUp(logosApi, Net.nodeConfigJson(), function (ok, note) {
-            if (!ok) {
-                setStatus("error", note)
-                root.netError(note)
-                if (done)
-                    done(false)
+        bringUpWatchdog.restart()
+
+        Delivery.checkRunning(logosApi, function (running) {
+            if (!bringUpBusy)
+                return
+            if (running) {
+                markRunning("Delivery node already running")
                 return
             }
-            nodeReady = true
-            setStatus("online", note)
-            if (done)
-                done(true)
+            Delivery.issueCreateAndStart(logosApi, Net.nodeConfigJson(), function (ok, note) {
+                if (!bringUpBusy)
+                    return
+                if (!ok) {
+                    finishEnsure(false, note + " — load delivery_module in Module Inspector, then retry")
+                    return
+                }
+                beginWaitForRunning("Delivery start dispatched — waiting for node…")
+            })
         })
     }
 
@@ -69,6 +131,7 @@ Item {
         callDelivery("subscribe", [topic], function () {
             roomReady = true
             setStatus("room", "Room " + roomCode + " — waiting for peer")
+            root.roomPrepared()
             if (done)
                 done(true)
         }, function (e) {
@@ -106,6 +169,7 @@ Item {
         matchSeed = Math.floor(Math.random() * 1000)
         matchStarted = false
         peerPresent = false
+        roomReady = false
         ensureNode(function (ok) {
             if (!ok)
                 return
@@ -114,6 +178,7 @@ Item {
                     return
                 send({ t: "hello", role: "host", seed: matchSeed })
                 setStatus("room", "Share code " + roomCode + " — waiting for guest")
+                root.roomPrepared()
             })
         })
     }
@@ -125,6 +190,7 @@ Item {
         roomCode = Net.normalizeCode(code)
         matchStarted = false
         peerPresent = false
+        roomReady = false
         if (roomCode.length < 4) {
             setStatus("error", "Enter a valid room code")
             return
@@ -137,6 +203,7 @@ Item {
                     return
                 send({ t: "hello", role: "guest" })
                 setStatus("room", "Joined " + roomCode + " — waiting for host")
+                root.roomPrepared()
             })
         })
     }
@@ -184,6 +251,32 @@ Item {
         }
     }
 
+    Timer {
+        id: bringUpWatchdog
+        interval: Delivery.BRING_UP_TIMEOUT_MS
+        repeat: false
+        onTriggered: {
+            if (!root.bringUpBusy)
+                return
+            root.finishEnsure(false,
+                "Timed out starting delivery node. Load delivery_module in Module Inspector, then retry.")
+        }
+    }
+
+    Timer {
+        id: runningPoll
+        interval: Delivery.POLL_MS
+        repeat: true
+        onTriggered: {
+            if (!root.bringUpBusy)
+                return
+            Delivery.checkRunning(root.logosApi, function (running) {
+                if (running)
+                    root.markRunning("Delivery node ready")
+            })
+        }
+    }
+
     Connections {
         target: root.logosApi
         ignoreUnknownSignals: true
@@ -197,8 +290,12 @@ Item {
                 root.handleIncoming(ev.topic, ev.payload)
             else if (eventName === "messageError")
                 root.setStatus("warn", ev.errorText || "message error")
-            else if (eventName === "nodeStarted")
-                root.nodeReady = true
+            else if (eventName === "nodeStarted") {
+                if (ev.nodeStart.ok)
+                    root.markRunning(ev.nodeStart.message || "Connected to logos.dev")
+                else if (root.bringUpBusy)
+                    root.finishEnsure(false, ev.nodeStart.message || "Delivery node failed to start")
+            }
         }
     }
 

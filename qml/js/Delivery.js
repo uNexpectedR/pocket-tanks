@@ -4,6 +4,8 @@
 
 var MODULE = "delivery_module"
 var EVENTS = ["messageReceived", "connectionStateChanged", "messageError", "nodeStarted"]
+var BRING_UP_TIMEOUT_MS = 25000
+var POLL_MS = 500
 
 function available(logosApi) {
     return logosApi !== undefined && logosApi !== null
@@ -25,15 +27,26 @@ function parseResult(payload) {
     return { ok: true, value: result }
 }
 
+function unwrapValue(info) {
+    if (info === undefined || info === null)
+        return info
+    if (typeof info === "object") {
+        if (info.value !== undefined)
+            return info.value
+        if (info.result !== undefined)
+            return info.result
+    }
+    return info
+}
+
 function isTruthyRunning(info) {
-    if (info === true || info === "true")
+    var v = unwrapValue(info)
+    if (v === true || v === "true" || v === 1 || v === "1")
         return true
-    if (!info || typeof info !== "object")
+    if (v === false || v === "false" || v === 0 || v === "0")
         return false
-    if (info.value !== undefined)
-        return info.value === true || String(info.value) === "true"
-    if (info.result !== undefined)
-        return info.result === true || String(info.result) === "true"
+    if (v && typeof v === "object" && v.running !== undefined)
+        return v.running === true || String(v.running) === "true"
     return false
 }
 
@@ -65,51 +78,56 @@ function armEvents(logosApi) {
     return true
 }
 
-/*! Create+start logos.dev node, or adopt one already running. */
-function bringUp(logosApi, configJson, onDone) {
-    function finish(ok, note) {
-        if (onDone)
-            onDone(ok, note || "")
-    }
-
+function checkRunning(logosApi, onResult) {
     call(logosApi, "getNodeInfo", ["IsRunning"], function (info) {
-        if (isTruthyRunning(info)) {
-            finish(true, "Delivery node already running")
-            return
-        }
-        createThenStart(logosApi, configJson, finish)
+        onResult(isTruthyRunning(info), info)
     }, function () {
-        createThenStart(logosApi, configJson, finish)
+        onResult(false, null)
     })
 }
 
-function createThenStart(logosApi, configJson, finish) {
+/*! Issue createNode + start (dispatch-only). Does not wait for nodeStarted. */
+function issueCreateAndStart(logosApi, configJson, onIssued) {
     call(logosApi, "createNode", [configJson], function () {
         call(logosApi, "start", [], function () {
-            finish(true, "Connected to logos.dev")
-        }, function () {
-            // start is often async; nodeStarted event covers the rest
-            finish(true, "Node starting…")
+            onIssued(true, "start dispatched")
+        }, function (err) {
+            onIssued(false, err ? String(err) : "start failed")
         })
     }, function (err) {
-        if (String(err).toLowerCase().indexOf("already") >= 0) {
+        var msg = String(err || "")
+        if (msg.toLowerCase().indexOf("already") >= 0) {
             call(logosApi, "start", [], function () {
-                finish(true, "Joined existing delivery node")
-            }, function () {
-                finish(true, "Using existing delivery node")
+                onIssued(true, "start dispatched on existing node")
+            }, function (startErr) {
+                // Node may already be running — caller will verify IsRunning.
+                onIssued(true, startErr ? String(startErr) : "using existing node")
             })
         } else {
-            finish(false, err)
+            onIssued(false, msg || "createNode failed")
         }
     })
+}
+
+function nodeStartedOk(data) {
+    if (!data || data.length === undefined || data.length < 1)
+        return { ok: true, message: "" }
+    var flag = data[0]
+    var ok = flag === true || flag === "true" || flag === 1 || flag === "1"
+    var message = data.length > 1 ? String(data[1] || "") : ""
+    return { ok: ok, message: message }
 }
 
 function eventPayload(data) {
     // messageReceived: [hash, topic, payload, source, ts]
+    // connectionStateChanged: [status, ts]
+    // messageError: [requestId, hash, error, ts]
+    // nodeStarted: [success, message, ts]
     return {
         topic: data && data.length > 1 ? data[1] : "",
         payload: data && data.length > 2 ? data[2] : "",
         errorText: data && data.length > 2 ? String(data[2]) : "",
-        linkState: data && data.length ? String(data[0]) : ""
+        linkState: data && data.length ? String(data[0]) : "",
+        nodeStart: nodeStartedOk(data)
     }
 }

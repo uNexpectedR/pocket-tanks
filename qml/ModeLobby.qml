@@ -8,7 +8,7 @@ Item {
 
     signal playLocal()
     signal hostOnline()
-    signal joinOnline(string code)
+    signal joinOnline()
 
     readonly property color ink: "#e8e2d6"
     readonly property color muted: "#9a9488"
@@ -135,7 +135,7 @@ Item {
         Button {
             id: onlineHost
             Layout.fillWidth: true
-            text: "Host online match"
+            text: "Host online"
             onClicked: root.hostOnline()
             contentItem: Text {
                 text: onlineHost.text
@@ -153,65 +153,23 @@ Item {
             }
         }
 
-        RowLayout {
+        Button {
+            id: onlineJoin
             Layout.fillWidth: true
-            spacing: 8
-            TextField {
-                id: joinField
-                Layout.fillWidth: true
-                placeholderText: "Room code"
+            text: "Join online"
+            onClicked: root.joinOnline()
+            contentItem: Text {
+                text: onlineJoin.text
                 color: ink
                 font.family: "IBM Plex Sans"
                 font.pixelSize: 14
-                font.capitalization: Font.AllUppercase
-                background: Rectangle {
-                    color: "#121820"
-                    border.color: line
-                    border.width: 1
-                    radius: 2
-                    implicitHeight: 46
-                }
-            }
-            Button {
-                id: joinBtn
-                text: "Join"
-                onClicked: root.joinOnline(joinField.text)
-                contentItem: Text {
-                    text: joinBtn.text
-                    color: ink
-                    font.family: "IBM Plex Sans"
-                    font.pixelSize: 14
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-                background: Rectangle {
-                    implicitWidth: 88
-                    implicitHeight: 46
-                    color: "#243040"
-                    border.color: line
-                    border.width: 1
-                    radius: 2
-                }
-            }
-        }
-
-        Button {
-            id: localBtn
-            Layout.fillWidth: true
-            text: "Local hotseat (same Mac)"
-            onClicked: root.playLocal()
-            contentItem: Text {
-                text: localBtn.text
-                color: ink
-                font.family: "IBM Plex Sans"
-                font.pixelSize: 13
+                font.bold: true
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
             background: Rectangle {
-                implicitHeight: 42
-                color: "transparent"
+                implicitHeight: 46
+                color: "#243040"
                 border.color: line
                 border.width: 1
                 radius: 2
@@ -220,17 +178,45 @@ Item {
 
         Text {
             Layout.fillWidth: true
-            Layout.topMargin: 6
-            text: {
-                if (!net)
-                    return ""
-                if (net.status === "error")
-                    return net.detail
-                if (net.role === "host" && net.roomCode)
-                    return "Your code: " + net.roomCode + (net.detail ? "\n" + net.detail : "")
-                return net.detail || (net.logosAvailable ? "Online via Logos delivery (logos.dev)." : "Preview mode — online needs Basecamp.")
+            Layout.topMargin: 4
+            Layout.bottomMargin: 2
+            text: "— or play here —"
+            color: muted
+            font.family: "IBM Plex Sans"
+            font.pixelSize: 11
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Button {
+            id: localBtn
+            Layout.fillWidth: true
+            text: "Play offline · local hotseat"
+            onClicked: root.playLocal()
+            contentItem: Text {
+                text: localBtn.text
+                color: "#12161c"
+                font.family: "IBM Plex Sans"
+                font.pixelSize: 15
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
-            color: net && net.status === "error" ? "#c45c48" : muted
+            background: Rectangle {
+                implicitHeight: 52
+                color: localBtn.down ? "#c4bba8" : "#e8e2d6"
+                border.color: "#f0ebe0"
+                border.width: 1
+                radius: 2
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.topMargin: 6
+            text: net && net.logosAvailable
+                  ? "Online via Logos delivery (logos.dev)."
+                  : "Preview mode — online needs Basecamp."
+            color: muted
             font.family: "IBM Plex Sans"
             font.pixelSize: 12
             wrapMode: Text.WordWrap

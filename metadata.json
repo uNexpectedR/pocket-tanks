@@ -1,10 +1,10 @@
 {
   "name": "ridge_fire",
   "display_name": "Ridge Fire",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "ui_qml",
   "category": "games",
-  "description": "Turn-based artillery duel across a destructible ridge. Nine weapons, fairer hits, sage crest, random callsigns, local hotseat or online host/join via Logos delivery.",
+  "description": "Turn-based artillery duel across a destructible ridge. Online host/join room popup with copy/paste codes, delivery node start timeout, nine weapons, local hotseat.",
   "view": "qml/Main.qml",
   "icon": "src/icons/icon.png",
   "dependencies": [],
